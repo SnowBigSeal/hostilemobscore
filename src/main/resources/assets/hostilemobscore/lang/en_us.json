@@ -1,0 +1,13 @@
+{
+  "itemGroup.hostilemobscore": "Example Mod Tab",
+  "block.hostilemobscore.example_block": "Example Block",
+  "item.hostilemobscore.example_item": "Example Item",
+
+  "hostilemobscore.configuration.title": "Hostile Mobs Core Configs",
+  "hostilemobscore.configuration.section.hostilemobscore.common.toml": "Hostile Mobs Core Configs",
+  "hostilemobscore.configuration.section.hostilemobscore.common.toml.title": "Hostile Mobs Core Configs",
+  "hostilemobscore.configuration.items": "Item List",
+  "hostilemobscore.configuration.logDirtBlock": "Log Dirt Block",
+  "hostilemobscore.configuration.magicNumberIntroduction": "Magic Number Text",
+  "hostilemobscore.configuration.magicNumber": "Magic Number"
+}
