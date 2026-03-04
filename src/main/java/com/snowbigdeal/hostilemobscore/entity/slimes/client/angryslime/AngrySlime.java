@@ -2,6 +2,9 @@ package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import com.snowbigdeal.hostilemobscore.Constants;
+import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
+import com.snowbigdeal.hostilemobscore.orchestrator.IOrchestrated;
+import com.snowbigdeal.hostilemobscore.orchestrator.OrchestratorAction;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.Brain;
@@ -33,13 +36,45 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.List;
+import java.util.UUID;
 
 
-public class AngrySlime extends Mob implements GeoEntity, SmartBrainOwner<AngrySlime> {
+public class AngrySlime extends Mob implements GeoEntity, SmartBrainOwner<AngrySlime>, IOrchestrated {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private Brain.Provider<?> BRAIN_PROVIDER;
-    public int slamCooldown = Constants.seconds(15); // start on cooldown so it can't slam immediately
+    public int slamCooldown = Constants.seconds(10); // start on cooldown so it can't slam immediately
+
+    // -------------------------------------------------------------------------
+    // IOrchestrated state
+    // -------------------------------------------------------------------------
+
+    private UUID partyId = null;
+    private OrchestratorAction pendingAction = null;
+
+    private boolean orchestratorSlamPending  = false;
+    private boolean orchestratorSlamFinished = false;
+
+    @Override public List<IMobAction> getMobActions()        { return List.of(new SlamMobAction()); }
+    @Override public UUID             getPartyId()           { return partyId; }
+    @Override public void             setPartyId(UUID id)    { this.partyId = id; }
+    @Override public OrchestratorAction getPendingAction()   { return pendingAction; }
+    @Override public void setPendingAction(OrchestratorAction a) { this.pendingAction = a; }
+
+    /** Called by {@link SlamMobAction} when the orchestrator assigns a slam. */
+    public void grantOrchestratedSlam() {
+        this.orchestratorSlamPending  = true;
+        this.orchestratorSlamFinished = false;
+    }
+
+    /** Called by {@link SlimeSlamAttackBehaviour} when the slam finishes. */
+    public void notifyOrchestratedSlamComplete() {
+        this.orchestratorSlamPending  = false;
+        this.orchestratorSlamFinished = true;
+    }
+
+    public boolean isOrchestratorSlamPending()  { return orchestratorSlamPending; }
+    public boolean isOrchestratedSlamFinished() { return orchestratorSlamFinished; }
 
     public AngrySlime(EntityType<? extends AngrySlime> entityType , Level level) {
         super(entityType, level);
@@ -185,8 +220,11 @@ public class AngrySlime extends Mob implements GeoEntity, SmartBrainOwner<AngryS
     public BrainActivityGroup<AngrySlime> getFightTasks() {
         return BrainActivityGroup.fightTasks(
                 new InvalidateAttackTarget<AngrySlime>().invalidateIf(
-                        (slime, target) -> target instanceof Player player
-                                          && player.getAbilities().invulnerable),
+                        (slime, target) -> {
+                            if (target instanceof Player player && player.getAbilities().invulnerable) return true;
+                            double followRange = slime.getAttributeValue(Attributes.FOLLOW_RANGE);
+                            return slime.distanceToSqr(target) > followRange * followRange;
+                        }),
                 new FirstApplicableBehaviour<AngrySlime>(
                         new SlimeSlamAttackBehaviour(),
                         new AnimatableMeleeAttack<AngrySlime>(10)

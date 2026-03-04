@@ -2,6 +2,7 @@ package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
 
 import com.mojang.datafixers.util.Pair;
 import com.snowbigdeal.hostilemobscore.Constants;
+import com.snowbigdeal.hostilemobscore.attack.AttackSnapshot;
 import com.snowbigdeal.hostilemobscore.network.CircleAoePacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,7 +15,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.tslat.smartbrainlib.api.core.behaviour.ExtendedBehaviour;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Periodic slam attack. Selects the player position that would hit the most
@@ -23,7 +27,7 @@ import java.util.List;
  */
 public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
 
-    private static final float  SLAM_RADIUS         = 5f;
+    private static final float  SLAM_RADIUS         = 4f;
     private static final float  SLAM_DAMAGE_MULT    = 5f;
     private static final float  SLAM_KNOCKBACK      = 1.5f;
     private static final int    WINDUP_TICKS        = Constants.seconds(1);
@@ -34,6 +38,13 @@ public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
     private static final int    BEHAVIOUR_TIMEOUT   = Constants.seconds(7); // safety cap
     private static final double LAUNCH_H_SCALE      = 0.15; // horizontal speed = dist * scale, capped at 1.0
     private static final double LAUNCH_V_VELOCITY   = 0.65; // upward launch velocity (blocks/tick)
+    /** Radius within which other slimes are considered "nearby" for stagger checks. */
+    private static final double STAGGER_CHECK_RADIUS = 20.0;
+    /** Extra cooldown added per additional nearby slime to spread out slams in groups. */
+    private static final int    STAGGER_PENALTY_TICKS = Constants.seconds(4);
+
+    /** Tracks UUIDs of slimes currently executing a slam — used for stagger gating. */
+    private static final Set<UUID> activeSlamming = new HashSet<>();
 
     /*
      * Particle ring backup — replaced by DamageAoeEntity
@@ -46,6 +57,7 @@ public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
 
     private Player  slamTarget       = null;
     private Vec3    slamPosition     = null; // snapshotted at windup start — does not follow the player
+    private AttackSnapshot<Player> slamSnapshot = null; // entities committed at launch time
     private int     windupTimer      = 0;
     private int     recoveryTimer    = 0;
     private int     flightTicks      = 0;  // counts ticks since launch — prevents same-tick land detection
@@ -60,9 +72,19 @@ public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, AngrySlime slime) {
-        return slime.getTarget() instanceof Player
-                && slime.onGround()
-                && slime.slamCooldown <= 0;
+        if (!(slime.getTarget() instanceof Player)) return false;
+        if (!slime.onGround() || slime.slamCooldown > 0) return false;
+
+        // If in a party, the orchestrator controls when we slam
+        if (slime.getPartyId() != null) {
+            return slime.isOrchestratorSlamPending();
+        }
+
+        // Solo slime: stagger gate — don't start if any nearby slime is currently slamming
+        return level.getEntitiesOfClass(AngrySlime.class,
+                        slime.getBoundingBox().inflate(STAGGER_CHECK_RADIUS),
+                        other -> other != slime && activeSlamming.contains(other.getUUID()))
+                .isEmpty();
     }
 
     @Override
@@ -79,8 +101,19 @@ public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
         this.hasLanded    = false;
         this.flightTicks  = 0;
         this.slamComplete = false;
+
+        // Base cooldown + variance
         slime.slamCooldown = COOLDOWN_TICKS + slime.getRandom().nextInt(COOLDOWN_VARIANCE);
-        this.slamPosition  = this.slamTarget.position(); // lock ring to this spot
+
+        // Cooldown penalty per additional nearby slime
+        int nearbyCount = slime.level().getEntitiesOfClass(AngrySlime.class,
+                slime.getBoundingBox().inflate(STAGGER_CHECK_RADIUS),
+                other -> other != slime).size();
+        slime.slamCooldown += nearbyCount * STAGGER_PENALTY_TICKS;
+
+        activeSlamming.add(slime.getUUID());
+
+        this.slamPosition = this.slamTarget != null ? this.slamTarget.position() : null;
 
         if (slime.getMoveControl() instanceof SlimeMoveControl smc) {
             smc.setSlamLock(true);
@@ -117,11 +150,14 @@ public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
 
     @Override
     protected void stop(AngrySlime slime) {
+        activeSlamming.remove(slime.getUUID());
         if (slime.getMoveControl() instanceof SlimeMoveControl smc) {
             smc.setSlamLock(false);
         }
+        slime.notifyOrchestratedSlamComplete();
         this.slamTarget    = null;
         this.slamPosition  = null;
+        this.slamSnapshot  = null;
         this.launched      = false;
         this.wasAirborne   = false;
         this.hasLanded     = false;
@@ -144,6 +180,12 @@ public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
         }
 
         if (--this.windupTimer <= 0) {
+            this.slamSnapshot = AttackSnapshot.capture(
+                    slime.level(),
+                    this.slamPosition,
+                    SLAM_RADIUS,
+                    Player.class,
+                    p -> !p.getAbilities().invulnerable && p.isAlive());
             launchTowardTarget(slime, this.slamTarget);
             slime.triggerAnim("slam", "slam_windup");
             this.wasAirborne = true; // mark airborne at launch; physics confirm next tick
@@ -237,17 +279,12 @@ public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
 
     private void dealAoeImpact(AngrySlime slime) {
         if (!(slime.level() instanceof ServerLevel)) return;
+        if (this.slamSnapshot == null) return;
 
         float damage = (float) slime.getAttributeValue(Attributes.ATTACK_DAMAGE) * SLAM_DAMAGE_MULT;
 
-        List<Player> targets = slime.level().getEntitiesOfClass(Player.class,
-                slime.getBoundingBox().inflate(SLAM_RADIUS).move(
-                        this.slamPosition.x - slime.getX(),
-                        0,
-                        this.slamPosition.z - slime.getZ()),
-                player -> !player.getAbilities().invulnerable && player.isAlive());
-
-        for (Player player : targets) {
+        for (Player player : this.slamSnapshot.targets()) {
+            if (!player.isAlive() || player.getAbilities().invulnerable) continue;
             player.hurt(slime.damageSources().mobAttack(slime), damage);
             applyKnockback(slime, player);
         }
