@@ -2,6 +2,7 @@ package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
 
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.MoveControl;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -27,8 +28,10 @@ public class SlimeMoveControl extends MoveControl {
     // Leap force set each tick by SlimeMoveBehaviour based on distance
     private float leapForce = 0.5f;
 
-    private static final double STRAFE_LATERAL_BOOST = 0.45;
-    private static final float  ROTATION_SPEED       = 90.0f;
+    private static final double STRAFE_LATERAL_BOOST  = 0.45;
+    private static final float  ROTATION_SPEED        = 90.0f;
+    /** Minimum clearance (blocks) above head needed to wander-jump — derived from JUMP_POWER_WANDER. */
+    private static final double WANDER_JUMP_CLEARANCE = 0.6;
 
     // When true, slam behaviour controls physics directly — hop logic is suppressed
     private boolean slamLock = false;
@@ -129,6 +132,16 @@ public class SlimeMoveControl extends MoveControl {
             this.jumpDelay /= 2;
         }
 
+        if (!hasCurrentClearance()) {
+            this.yRot += 180f; // escape the low-ceiling space regardless of mode
+            return;
+        }
+
+        if (!this.isAggressive && !this.isStrafeMode && !hasDestinationClearance()) {
+            this.yRot += 180f;
+            return;
+        }
+
         if (this.isStrafeMode) {
             launchStrafeJump(speed);
         } else {
@@ -136,6 +149,19 @@ public class SlimeMoveControl extends MoveControl {
         }
 
         this.slime.getJumpControl().jump();
+    }
+
+    private boolean hasCurrentClearance() {
+        return this.slime.level().noCollision(this.slime,
+            this.slime.getBoundingBox().expandTowards(0, WANDER_JUMP_CLEARANCE, 0));
+    }
+
+    private boolean hasDestinationClearance() {
+        float yRotRad = this.yRot * (float) (Math.PI / 180.0);
+        double dx = -Math.sin(yRotRad);
+        double dz =  Math.cos(yRotRad);
+        return this.slime.level().noCollision(this.slime,
+            this.slime.getBoundingBox().move(dx, 0, dz).expandTowards(0, WANDER_JUMP_CLEARANCE, 0));
     }
 
     private void launchForwardJump(float speed) {

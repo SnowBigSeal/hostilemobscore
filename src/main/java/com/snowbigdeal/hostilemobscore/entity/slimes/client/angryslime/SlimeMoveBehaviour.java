@@ -58,6 +58,7 @@ public class SlimeMoveBehaviour extends ExtendedBehaviour<AngrySlime> {
     @Override
     protected void tick(AngrySlime slime) {
         if (!(slime.getMoveControl() instanceof SlimeMoveControl smc)) return;
+        if (slime.isReturningHome()) return; // SlimeReturnHomeBehaviour owns movement
 
         if (slime.getTarget() != null) {
             tickCombat(slime, smc);

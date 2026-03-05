@@ -2,7 +2,9 @@
   "required": true,
   "package": "com.snowbigdeal.hostilemobscore.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
+  "mixins": [
+    "LeafCollisionMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   },

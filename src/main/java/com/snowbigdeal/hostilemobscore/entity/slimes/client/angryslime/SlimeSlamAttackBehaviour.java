@@ -43,6 +43,9 @@ public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
     /** Extra cooldown added per additional nearby slime to spread out slams in groups. */
     private static final int    STAGGER_PENALTY_TICKS = Constants.seconds(4);
 
+    /** Minimum vertical clearance (blocks above head) required to jump — derived from launch physics. */
+    private static final double JUMP_CLEARANCE = (LAUNCH_V_VELOCITY * LAUNCH_V_VELOCITY) / (2 * 0.08);
+
     /** Tracks UUIDs of slimes currently executing a slam — used for stagger gating. */
     private static final Set<UUID> activeSlamming = new HashSet<>();
 
@@ -72,8 +75,12 @@ public class SlimeSlamAttackBehaviour extends ExtendedBehaviour<AngrySlime> {
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, AngrySlime slime) {
-        if (!(slime.getTarget() instanceof Player)) return false;
+        if (!(slime.getTarget() instanceof Player player)) return false;
         if (!slime.onGround() || slime.slamCooldown > 0) return false;
+        if (slime.isInWater()) return false;
+        if (!slime.hasLineOfSight(player)) return false;
+        if (!level.noCollision(slime, slime.getBoundingBox().expandTowards(0, JUMP_CLEARANCE, 0))) return false;
+        if (slime.getNavigation().createPath(player, 1) == null) return false;
 
         // If in a party, the orchestrator controls when we slam
         if (slime.getPartyId() != null) {

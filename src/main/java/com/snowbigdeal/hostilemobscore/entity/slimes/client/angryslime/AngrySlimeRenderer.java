@@ -16,11 +16,9 @@ public class AngrySlimeRenderer extends GeoEntityRenderer<AngrySlime> {
 
     @Override
     public void renderRecursively(PoseStack poseStack, AngrySlime animatable, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, int colour) {
-        // Check if this is the outer_cube bone and apply translucent rendering
-        if(bone.getName().equals("outer_cube")) {
+        if (bone.getName().equals("outer_cube")) {
             renderType = RenderType.entityTranslucent(this.getGeoModel().getTextureResource(animatable, this));
             buffer = bufferSource.getBuffer(renderType);
-            packedLight = LightTexture.FULL_BRIGHT;
         }
         super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
     }
