@@ -1,4 +1,4 @@
-package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
+package com.snowbigdeal.hostilemobscore.entity.slimes;
 
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.MoveControl;
@@ -10,14 +10,14 @@ import net.minecraft.world.phys.Vec3;
  * Logic lives here (not in the brain behaviour) so it runs last each tick
  * and isn't overwritten by the default pathfinding MoveControl.
  *
- * Brain behaviour (SlimeMoveBehaviour) simply calls setDirection() and
+ * Brain behaviour ({@link SlimeMoveBehaviour}) simply calls setDirection() and
  * setWantedMovement() each tick, mirroring how vanilla goals drive vanilla SlimeMoveControl.
  */
 public class SlimeMoveControl extends MoveControl {
 
     private float yRot;
     private int jumpDelay;
-    private final AngrySlime slime;
+    private final BaseSlime<?> slime;
     private boolean isAggressive;
 
     // Strafe state
@@ -36,7 +36,7 @@ public class SlimeMoveControl extends MoveControl {
     // When true, slam behaviour controls physics directly — hop logic is suppressed
     private boolean slamLock = false;
 
-    public SlimeMoveControl(AngrySlime slime) {
+    public SlimeMoveControl(BaseSlime<?> slime) {
         super(slime);
         this.slime = slime;
         this.yRot = slime.getYRot();

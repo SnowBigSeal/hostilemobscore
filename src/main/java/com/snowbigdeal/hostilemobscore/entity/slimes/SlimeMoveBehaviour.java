@@ -1,4 +1,4 @@
-package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
+package com.snowbigdeal.hostilemobscore.entity.slimes;
 
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -9,13 +9,13 @@ import net.tslat.smartbrainlib.api.core.behaviour.ExtendedBehaviour;
 import java.util.List;
 
 /**
- * Drives slime hopping movement by updating SlimeMoveControl each tick.
+ * Drives slime hopping movement by updating {@link SlimeMoveControl} each tick.
  * All jump/speed logic lives in SlimeMoveControl so it executes after the
  * brain tick and can't be overwritten by the default pathfinding MoveControl.
  */
-public class SlimeMoveBehaviour extends ExtendedBehaviour<AngrySlime> {
+public class SlimeMoveBehaviour<T extends BaseSlime<T>> extends ExtendedBehaviour<T> {
 
-    /** Maximum horizontal impulse applied at full follow range. Tune to taste. */
+    /** Maximum horizontal impulse applied at full follow range. */
     private static final float  MAX_LEAP_FORCE    = 1.4f;
     /** Distance (blocks) the slime aims to land at — centre of the strafe sweet spot. */
     private static final float  TARGET_DIST       = 4.0f;
@@ -43,12 +43,12 @@ public class SlimeMoveBehaviour extends ExtendedBehaviour<AngrySlime> {
     }
 
     @Override
-    protected boolean shouldKeepRunning(AngrySlime slime) {
+    protected boolean shouldKeepRunning(T slime) {
         return true;
     }
 
     @Override
-    protected void start(AngrySlime slime) {
+    protected void start(T slime) {
         this.wanderYRot = slime.getYRot();
         this.directionTimer = 0;
         this.isStrafing = false;
@@ -56,7 +56,7 @@ public class SlimeMoveBehaviour extends ExtendedBehaviour<AngrySlime> {
     }
 
     @Override
-    protected void tick(AngrySlime slime) {
+    protected void tick(T slime) {
         if (!(slime.getMoveControl() instanceof SlimeMoveControl smc)) return;
         if (slime.isReturningHome()) return; // SlimeReturnHomeBehaviour owns movement
 
@@ -67,7 +67,7 @@ public class SlimeMoveBehaviour extends ExtendedBehaviour<AngrySlime> {
         }
     }
 
-    private void tickCombat(AngrySlime slime, SlimeMoveControl smc) {
+    private void tickCombat(T slime, SlimeMoveControl smc) {
         float yRot = angleToTarget(slime);
         double distSq = slime.distanceToSqr(slime.getTarget());
 
@@ -81,13 +81,13 @@ public class SlimeMoveBehaviour extends ExtendedBehaviour<AngrySlime> {
         }
     }
 
-    private void tickWander(AngrySlime slime, SlimeMoveControl smc) {
+    private void tickWander(T slime, SlimeMoveControl smc) {
         updateWanderDirection(slime);
         smc.setDirection(this.wanderYRot, false);
         smc.setWantedMovement(WANDER_SPEED);
     }
 
-    private float angleToTarget(AngrySlime slime) {
+    private float angleToTarget(T slime) {
         double dx = slime.getTarget().getX() - slime.getX();
         double dz = slime.getTarget().getZ() - slime.getZ();
         return (float) (Math.toDegrees(Math.atan2(dz, dx))) - 90.0F;
@@ -101,7 +101,7 @@ public class SlimeMoveBehaviour extends ExtendedBehaviour<AngrySlime> {
         }
     }
 
-    private void checkMagicHit(AngrySlime slime, double distSq) {
+    private void checkMagicHit(T slime, double distSq) {
         boolean wasInDamageRange = this.isInDamageRange;
         this.isInDamageRange = distSq < MELEE_DIST * MELEE_DIST;
 
@@ -130,7 +130,7 @@ public class SlimeMoveBehaviour extends ExtendedBehaviour<AngrySlime> {
                 Math.max(0, (dist - TARGET_DIST) / (MAX_DIST - TARGET_DIST) * MAX_LEAP_FORCE));
     }
 
-    private void updateWanderDirection(AngrySlime slime) {
+    private void updateWanderDirection(T slime) {
         if (--this.directionTimer <= 0) {
             this.directionTimer = WANDER_DIR_MIN + slime.getRandom().nextInt(WANDER_DIR_RANGE);
             this.wanderYRot = slime.getRandom().nextFloat() * 360.0F;
@@ -138,7 +138,7 @@ public class SlimeMoveBehaviour extends ExtendedBehaviour<AngrySlime> {
     }
 
     @Override
-    protected void stop(AngrySlime slime) {
+    protected void stop(T slime) {
         if (slime.getMoveControl() instanceof SlimeMoveControl smc) {
             smc.setWantedMovement(0.0);
         }

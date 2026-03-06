@@ -1,11 +1,15 @@
 package com.snowbigdeal.hostilemobscore;
 
-import com.snowbigdeal.hostilemobscore.client.SlamVfxManager;
+import com.snowbigdeal.hostilemobscore.choreography.AttackRegistry;
+import com.snowbigdeal.hostilemobscore.client.TelegraphAttackVfxManager;
+import com.snowbigdeal.hostilemobscore.datapack.BossSequenceLoader;
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.AngrySlimeRenderer;
+import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlimeSlamAttackBehaviour;
 import com.snowbigdeal.hostilemobscore.items.ModItems;
-import com.snowbigdeal.hostilemobscore.network.CircleAoePacket;
+import com.snowbigdeal.hostilemobscore.network.TelegraphAttackPacket;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.common.EventBusSubscriber;
 import org.slf4j.Logger;
 
@@ -20,6 +24,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -34,6 +39,7 @@ public class HostileMobsCore {
         modEventBus.addListener(HostileMobsCore::registerPayloads);
 
         NeoForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.addListener(HostileMobsCore::onAddReloadListeners);
 
         ModEntities.register(modEventBus);
         ModItems.register(modEventBus);
@@ -45,12 +51,20 @@ public class HostileMobsCore {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
+        // Register attack IDs for the choreography system
+        AttackRegistry.register(
+                ResourceLocation.fromNamespaceAndPath(MODID, "angry_slime.slam"),
+                SlimeSlamAttackBehaviour::new);
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").playToClient(CircleAoePacket.TYPE, CircleAoePacket.STREAM_CODEC,
+        event.registrar("1").playToClient(TelegraphAttackPacket.TYPE, TelegraphAttackPacket.STREAM_CODEC,
                 (packet, ctx) -> ctx.enqueueWork(() ->
-                        SlamVfxManager.spawn(packet.center(), packet.radius(), packet.lifetime())));
+                        TelegraphAttackVfxManager.spawn(packet.shape(), packet.lifetimeTicks())));
+    }
+
+    private static void onAddReloadListeners(AddReloadListenerEvent event) {
+        event.addListener(new BossSequenceLoader());
     }
 
     private void addCreative(BuildCreativeModeTabContentsEvent event) {

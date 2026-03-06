@@ -1,4 +1,4 @@
-package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
+package com.snowbigdeal.hostilemobscore.entity.slimes;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -9,12 +9,12 @@ import net.tslat.smartbrainlib.util.BrainUtils;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Custom targeting for AngrySlime. Extends TargetOrRetaliate and gates all
+ * Custom targeting for slime mobs. Extends TargetOrRetaliate and gates all
  * target acquisition (initial + retaliation) through a single predicate so
  * nothing can sneak past: creative/spectator players and targets outside the
  * tether radius are never set or kept.
  */
-public class SlimeTargetBehaviour extends TargetOrRetaliate<AngrySlime> {
+public class SlimeTargetBehaviour<T extends BaseSlime<T>> extends TargetOrRetaliate<T> {
 
     public SlimeTargetBehaviour() {
         attackablePredicate(target ->
@@ -25,7 +25,7 @@ public class SlimeTargetBehaviour extends TargetOrRetaliate<AngrySlime> {
 
     @Override
     @Nullable
-    protected LivingEntity getTarget(AngrySlime owner, ServerLevel level, @Nullable LivingEntity existingTarget) {
+    protected LivingEntity getTarget(T owner, ServerLevel level, @Nullable LivingEntity existingTarget) {
         LivingEntity candidate = super.getTarget(owner, level, existingTarget);
         if (candidate == null) return null;
         if (!owner.isWithinRestriction()) return null;
@@ -33,14 +33,14 @@ public class SlimeTargetBehaviour extends TargetOrRetaliate<AngrySlime> {
     }
 
     @Override
-    protected boolean checkExtraStartConditions(ServerLevel level, AngrySlime owner) {
+    protected boolean checkExtraStartConditions(ServerLevel level, T owner) {
         if (!owner.isWithinRestriction()) return false;
         if (owner.isReturningHome()) return false;
         return super.checkExtraStartConditions(level, owner);
     }
 
     @Override
-    protected void start(AngrySlime entity) {
+    protected void start(T entity) {
         super.start(entity);
         // Ensure brain memory stays in sync with what we allow
         LivingEntity target = BrainUtils.getTargetOfEntity(entity);
