@@ -1,0 +1,14 @@
+{
+  "angry_slime.jump": {
+    "subtitle": "subtitles.entity.slime.jump",
+    "sounds": [
+      "hostilemobscore:entity/angry_slime/jump"
+    ]
+  },
+  "angry_slime.land": {
+    "subtitle": "subtitles.entity.slime.squish",
+    "sounds": [
+      "hostilemobscore:entity/angry_slime/land"
+    ]
+  }
+}

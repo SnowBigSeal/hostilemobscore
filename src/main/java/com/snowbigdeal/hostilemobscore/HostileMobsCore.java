@@ -8,6 +8,7 @@ import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.AngrySlim
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlimeSlamAttackBehaviour;
 import com.snowbigdeal.hostilemobscore.items.ModItems;
 import com.snowbigdeal.hostilemobscore.network.TelegraphAttackPacket;
+import com.snowbigdeal.hostilemobscore.sounds.ModSounds;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -43,6 +44,7 @@ public class HostileMobsCore {
 
         ModEntities.register(modEventBus);
         ModItems.register(modEventBus);
+        ModSounds.register(modEventBus);
 
         modEventBus.addListener(this::addCreative);
         modContainer.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);

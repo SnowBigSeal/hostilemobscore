@@ -4,6 +4,9 @@ import com.snowbigdeal.hostilemobscore.Constants;
 import com.snowbigdeal.hostilemobscore.entity.slimes.BaseSlime;
 import com.snowbigdeal.hostilemobscore.entity.slimes.SlimeMoveControl;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
+import com.snowbigdeal.hostilemobscore.sounds.ModSounds;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -83,6 +86,16 @@ public class AngrySlime extends BaseSlime<AngrySlime> {
     private static final int    TETHER_RADIUS             = 32;
     private static final double BASE_SAFE_FALL_DISTANCE   = 20.0;
     private static final double BASE_FALL_DAMAGE_MULTIPLIER = 0.1;
+
+    // -------------------------------------------------------------------------
+    // Sounds
+    // -------------------------------------------------------------------------
+
+    @Override protected SoundEvent getJumpSound() { return ModSounds.ANGRY_SLIME_JUMP.get(); }
+    @Override protected SoundEvent getLandSound() { return ModSounds.ANGRY_SLIME_LAND.get(); }
+
+    @Override protected SoundEvent getHurtSound(net.minecraft.world.damagesource.DamageSource source) { return SoundEvents.SLIME_HURT; }
+    @Override protected SoundEvent getDeathSound() { return SoundEvents.SLIME_DEATH; }
 
     // -------------------------------------------------------------------------
     // Animation — slam controllers added on top of BaseSlime's movement controller

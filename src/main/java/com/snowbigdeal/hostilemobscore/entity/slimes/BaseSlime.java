@@ -1,6 +1,7 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes;
 
 import com.snowbigdeal.hostilemobscore.entity.HostileMob;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
@@ -49,6 +50,16 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     private static final RawAnimation ANIM_FLOAT = RawAnimation.begin().thenLoop("float");
 
     // -------------------------------------------------------------------------
+    // Sounds — subclasses override to supply their specific sound events
+    // -------------------------------------------------------------------------
+
+    /** Sound played when the slime leaves the ground. Return {@code null} for silence. */
+    protected SoundEvent getJumpSound() { return null; }
+
+    /** Sound played when the slime lands. Return {@code null} for silence. */
+    protected SoundEvent getLandSound() { return null; }
+
+    // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
 
@@ -61,6 +72,8 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     // Physics
     // -------------------------------------------------------------------------
 
+    private boolean wasOnGround = true;
+
     /** Apply a strong upward buoyancy force whenever submerged in water. */
     @Override
     public void tick() {
@@ -69,6 +82,15 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
             Vec3 motion = this.getDeltaMovement();
             this.setDeltaMovement(motion.x, motion.y + 0.12, motion.z);
         }
+        // Landing sound: detect transition from airborne to on-ground
+        if (!wasOnGround && this.onGround()) {
+            SoundEvent land = getLandSound();
+            if (land != null) {
+                this.playSound(land, this.getSoundVolume(),
+                        (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
+            }
+        }
+        wasOnGround = this.onGround();
     }
 
     @Override
@@ -83,6 +105,11 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
                 current.y,
                 current.z + Math.cos(yRotRad) * boost
             );
+        }
+        SoundEvent jump = getJumpSound();
+        if (jump != null) {
+            this.playSound(jump, this.getSoundVolume(),
+                    (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
         }
     }
 
