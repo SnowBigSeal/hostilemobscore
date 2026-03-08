@@ -14,10 +14,13 @@ public class ModSounds {
             DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, HostileMobsCore.MODID);
 
     public static final DeferredHolder<SoundEvent, SoundEvent> ANGRY_SLIME_JUMP =
-            register("angry_slime.jump");
+            register("entity.angry_slime.jump");
 
     public static final DeferredHolder<SoundEvent, SoundEvent> ANGRY_SLIME_LAND =
-            register("angry_slime.land");
+            register("entity.angry_slime.land");
+
+    public static final DeferredHolder<SoundEvent, SoundEvent> ANGRY_SLIME_SLAM =
+            register("entity.angry_slime.slam");
 
     private static DeferredHolder<SoundEvent, SoundEvent> register(String name) {
         return SOUND_EVENTS.register(name, () ->

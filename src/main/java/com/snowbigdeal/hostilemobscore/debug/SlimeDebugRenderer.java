@@ -15,7 +15,7 @@ import java.util.*;
 /**
  * Draws debug wireframes in-world.
  * <ul>
- *   <li><b>tether</b> – orange circle at entity's Y showing the 32-block tether radius, plus a
+ *   <li><b>tether</b> – orange circle at entity's Y showing the 64-block tether radius, plus a
  *       line back to the tether anchor.</li>
  *   <li><b>party</b> – coloured lines connecting party members to each other.</li>
  * </ul>

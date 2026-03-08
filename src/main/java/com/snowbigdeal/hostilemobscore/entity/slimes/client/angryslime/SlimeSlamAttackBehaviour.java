@@ -3,12 +3,14 @@ package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
 import com.mojang.datafixers.util.Pair;
 import com.snowbigdeal.hostilemobscore.Constants;
 import com.snowbigdeal.hostilemobscore.attack.AttackSnapshot;
+import com.snowbigdeal.hostilemobscore.sounds.ModSounds;
 import com.snowbigdeal.hostilemobscore.attack.shape.CircleShape;
 import com.snowbigdeal.hostilemobscore.attack.shape.TelegraphAttackShape;
 import com.snowbigdeal.hostilemobscore.entity.behaviour.TelegraphAttackBehaviour;
 import com.snowbigdeal.hostilemobscore.entity.slimes.SlimeMoveControl;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -16,16 +18,11 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 /**
- * Periodic slam attack. Selects the player position that would hit the most
- * other players in the AoE radius, shows an expanding warning ring during
- * wind-up, then launches and deals AoE damage + knockback on landing.
+ * Orchestrated slam attack. Targets a random player in range during wind-up,
+ * shows an expanding warning ring, then launches and deals AoE damage + knockback on landing.
  *
  * <p>Extends {@link TelegraphAttackBehaviour}: the windup/packet/recovery lifecycle
  * is handled by the base. This class supplies the slam-specific geometry, movement,
@@ -45,17 +42,14 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
     private static final int    BEHAVIOUR_TIMEOUT     = Constants.seconds(7);
 
     // ---- Physics ----
-    private static final double LAUNCH_H_SCALE  = 0.15;
-    private static final double LAUNCH_V_VELOCITY = 0.65;
+    /** Arc peak = this fraction of horizontal distance (e.g. 0.75 → 75% of dist). */
+    private static final double ARC_HEIGHT_FACTOR  = 0.75;
+    private static final double GRAVITY            = 0.08;
+    private static final double HORIZONTAL_DRAG    = 0.91; // Minecraft air friction per tick
+    private static final double HORIZONTAL_BOOST   = 1.4;  // compensate for real-world friction losses
 
     /** Minimum vertical clearance required to jump. */
-    private static final double JUMP_CLEARANCE = (LAUNCH_V_VELOCITY * LAUNCH_V_VELOCITY) / (2 * 0.08);
-
-    private static final double STAGGER_CHECK_RADIUS  = 20.0;
-    private static final int    STAGGER_PENALTY_TICKS = Constants.seconds(4);
-
-    /** UUIDs of slimes currently executing a slam — stagger gating. */
-    private static final Set<UUID> activeSlamming = new HashSet<>();
+    private static final double JUMP_CLEARANCE = 8.0;
 
     // ---- Instance state ----
     private Player  slamTarget   = null;
@@ -87,12 +81,7 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
         if (!level.noCollision(slime, slime.getBoundingBox().expandTowards(0, JUMP_CLEARANCE, 0))) return false;
         if (slime.getNavigation().createPath(player, 1) == null) return false;
 
-        if (slime.getPartyId() != null) return slime.isOrchestratorSlamPending();
-
-        return level.getEntitiesOfClass(AngrySlime.class,
-                slime.getBoundingBox().inflate(STAGGER_CHECK_RADIUS),
-                other -> other != slime && activeSlamming.contains(other.getUUID()))
-                .isEmpty();
+        return slime.isOrchestratorSlamPending();
     }
 
     // -------------------------------------------------------------------------
@@ -101,7 +90,7 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
 
     @Override
     protected TelegraphAttackShape buildShape(AngrySlime slime) {
-        this.slamTarget  = findBestSlamTarget(slime);
+        this.slamTarget  = findSlamTarget(slime);
         this.slamPosition = slamTarget != null
                 ? groundPositionBelow(slime, slamTarget.blockPosition())
                 : slime.position();
@@ -118,12 +107,6 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
         this.wasAirborne = false;
 
         slime.slamCooldown = COOLDOWN_TICKS + slime.getRandom().nextInt(COOLDOWN_VARIANCE);
-        int nearbyCount = slime.level().getEntitiesOfClass(AngrySlime.class,
-                slime.getBoundingBox().inflate(STAGGER_CHECK_RADIUS),
-                other -> other != slime).size();
-        slime.slamCooldown += nearbyCount * STAGGER_PENALTY_TICKS;
-
-        activeSlamming.add(slime.getUUID());
 
         if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setSlamLock(true);
     }
@@ -136,6 +119,7 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
     @Override
     protected void applyLaunch(AngrySlime slime) {
         slime.triggerAnim("slam", "slam_windup");
+        slime.playSound(ModSounds.ANGRY_SLIME_JUMP.get(), 1.0F, 1.0F);
         launchTowardSlamPosition(slime);
     }
 
@@ -149,6 +133,7 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
     @Override
     protected void onImpact(AngrySlime slime, AttackSnapshot<Player> snapshot) {
         slime.triggerAnim("slam", "slam_impact");
+        slime.playSound(ModSounds.ANGRY_SLIME_SLAM.get(), 1.0F, 1.0F);
         dealDamage(slime, snapshot);
     }
 
@@ -159,7 +144,6 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
 
     @Override
     protected void onStop(AngrySlime slime) {
-        activeSlamming.remove(slime.getUUID());
         if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setSlamLock(false);
         slime.notifyOrchestratedSlamComplete();
         slamTarget   = null;
@@ -174,14 +158,27 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
 
     private void launchTowardSlamPosition(AngrySlime slime) {
         if (slamPosition == null) return;
-        double dx   = slamPosition.x - slime.getX();
-        double dz   = slamPosition.z - slime.getZ();
-        double dist = Math.sqrt(dx * dx + dz * dz);
-        double hBoost = dist > 0 ? Math.min(1.0, dist * LAUNCH_H_SCALE) : 0;
+        double dx = slamPosition.x - slime.getX();
+        double dz = slamPosition.z - slime.getZ();
+        double horizDist = Math.sqrt(dx * dx + dz * dz);
+        double targetDY  = slamPosition.y - slime.getY();
+
+        // Arc height scales with distance — ensure it always clears the target's height
+        double H  = Math.max(targetDY + 1.0, horizDist * ARC_HEIGHT_FACTOR);
+        double vy = Math.sqrt(2.0 * GRAVITY * H);
+
+        double T = (vy + Math.sqrt(vy * vy - 2.0 * GRAVITY * targetDY)) / GRAVITY;
+
+        // Horizontal drag: actual dist = vxz * (1 - drag^T) / (1 - drag)
+        // Solve for vxz so the slime actually covers horizDist
+        double horizSum = (1.0 - Math.pow(HORIZONTAL_DRAG, T)) / (1.0 - HORIZONTAL_DRAG);
+        double vxz = horizDist > 0 ? (horizDist / horizSum) * HORIZONTAL_BOOST : 0.0;
+
         slime.setDeltaMovement(
-                dist > 0 ? (dx / dist) * hBoost : 0,
-                LAUNCH_V_VELOCITY,
-                dist > 0 ? (dz / dist) * hBoost : 0);
+            horizDist > 0 ? (dx / horizDist) * vxz : 0,
+            vy,
+            horizDist > 0 ? (dz / horizDist) * vxz : 0
+        );
         slime.hasImpulse = true;
     }
 
@@ -211,22 +208,13 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
         if (dist > 0) player.knockback(SLAM_KNOCKBACK, -dx / dist, -dz / dist);
     }
 
-    private Player findBestSlamTarget(AngrySlime slime) {
+    private Player findSlamTarget(AngrySlime slime) {
         double followRange = slime.getAttributeValue(Attributes.FOLLOW_RANGE);
         List<Player> nearby = slime.level().getEntitiesOfClass(Player.class,
                 slime.getBoundingBox().inflate(followRange),
                 p -> !p.getAbilities().invulnerable && p.isAlive());
         if (nearby.isEmpty()) return slime.getTarget() instanceof Player p ? p : null;
-        return nearby.stream()
-                .max(Comparator.comparingInt(p ->
-                        countPlayersNear(p.position(), SLAM_RADIUS, nearby)))
-                .orElse(null);
-    }
-
-    private int countPlayersNear(Vec3 position, float radius, List<Player> players) {
-        return (int) players.stream()
-                .filter(p -> p.position().distanceTo(position) <= radius)
-                .count();
+        return nearby.get(slime.getRandom().nextInt(nearby.size()));
     }
 
     private static Vec3 groundPositionBelow(AngrySlime slime, BlockPos from) {
@@ -234,7 +222,8 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
         int minY = slime.level().getMinBuildHeight();
         while (pos.getY() > minY) {
             pos.move(Direction.DOWN);
-            if (slime.level().getBlockState(pos).isSolid()) {
+            BlockState state = slime.level().getBlockState(pos);
+            if (!state.isAir() && !state.getCollisionShape(slime.level(), pos).isEmpty()) {
                 return new Vec3(from.getX() + 0.5, pos.getY() + 1.0, from.getZ() + 0.5);
             }
         }

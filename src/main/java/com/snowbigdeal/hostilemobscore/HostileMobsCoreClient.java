@@ -1,8 +1,12 @@
 package com.snowbigdeal.hostilemobscore;
 
+import com.snowbigdeal.hostilemobscore.block.ModBlocks;
 import com.snowbigdeal.hostilemobscore.debug.SlimeDebugRenderer;
-import net.minecraft.client.Minecraft;
+import com.snowbigdeal.hostilemobscore.client.TelegraphAttackVfxManager;
+import com.snowbigdeal.hostilemobscore.items.ModItems;
+import com.snowbigdeal.hostilemobscore.items.SlimeBallColorUtil;
 import net.minecraft.commands.Commands;
+import net.minecraft.world.item.DyeColor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -10,6 +14,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -28,9 +33,29 @@ public class HostileMobsCoreClient {
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
-        // Some client setup code
-        HostileMobsCore.LOGGER.info("HELLO FROM CLIENT SETUP");
-        HostileMobsCore.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+    }
+
+    @SubscribeEvent
+    static void onRegisterItemColors(RegisterColorHandlersEvent.Item event) {
+        for (DyeColor dye : DyeColor.values()) {
+            int rgb = SlimeBallColorUtil.dyeColorToRgb(dye) | 0xFF000000;
+            event.register(
+                    (stack, tintIndex) -> tintIndex == 0 ? rgb : 0xFFFFFFFF,
+                    ModItems.getSlimeball(dye));
+            event.register(
+                    (stack, tintIndex) -> tintIndex == 0 ? rgb : 0xFFFFFFFF,
+                    ModBlocks.getSlimeBlockItem(dye));
+        }
+    }
+
+    @SubscribeEvent
+    static void onRegisterBlockColors(RegisterColorHandlersEvent.Block event) {
+        for (DyeColor dye : DyeColor.values()) {
+            int rgb = SlimeBallColorUtil.dyeColorToRgb(dye) | 0xFF000000;
+            event.register(
+                    (state, level, pos, tintIndex) -> tintIndex == 0 ? rgb : 0xFFFFFFFF,
+                    ModBlocks.getSlimeBlock(dye));
+        }
     }
 
     @SubscribeEvent
@@ -39,7 +64,17 @@ public class HostileMobsCoreClient {
             Commands.literal("hmcdebug")
                 .then(Commands.literal("tether").executes(ctx -> { SlimeDebugRenderer.toggle("tether"); return 1; }))
                 .then(Commands.literal("party").executes(ctx -> { SlimeDebugRenderer.toggle("party"); return 1; }))
-                .then(Commands.literal("off").executes(ctx -> { SlimeDebugRenderer.ACTIVE_MODES.clear(); return 1; }))
+                .then(Commands.literal("slam-circle").executes(ctx -> {
+                    TelegraphAttackVfxManager.debugKeepLastSlamCircle = !TelegraphAttackVfxManager.debugKeepLastSlamCircle;
+                    ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
+                        "Slam circle debug: " + (TelegraphAttackVfxManager.debugKeepLastSlamCircle ? "ON" : "OFF")), false);
+                    return 1;
+                }))
+                .then(Commands.literal("off").executes(ctx -> {
+                    SlimeDebugRenderer.ACTIVE_MODES.clear();
+                    TelegraphAttackVfxManager.debugKeepLastSlamCircle = false;
+                    return 1;
+                }))
         );
     }
 

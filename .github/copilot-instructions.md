@@ -100,6 +100,13 @@ The project has multiple run configurations defined in `build.gradle`:
 - Renderers extend `GeoEntityRenderer<T>`
 - Register client-side renderers in `ClientModEvents.onClientSetup()`
 
+### Sounds
+
+- Register sound events via `DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, MODID)` using `SoundEvent.createVariableRangeEvent()`
+- `sounds.json` sound file paths **must** include the mod namespace prefix (e.g. `"hostilemobscore:entity/foo/bar"`). Paths without a namespace default to `minecraft:` and will silently fail.
+- **OGG files must be mono.** Stereo files bypass OpenAL distance attenuation and always play at full volume regardless of the entity's position.
+- `Entity.playSound()` plays at the entity's location and is automatically silent on the client side — no side-check needed.
+
 ### AI Behavior
 
 - Use **SmartBrainLib** for goal-based AI (replaces vanilla goal selectors)

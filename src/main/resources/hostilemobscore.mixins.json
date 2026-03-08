@@ -3,6 +3,9 @@
   "package": "com.snowbigdeal.hostilemobscore.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "InventoryMixin",
+    "ItemEntityMixin",
+    "ItemStackMixin",
     "LeafCollisionMixin"
   ],
   "injectors": {

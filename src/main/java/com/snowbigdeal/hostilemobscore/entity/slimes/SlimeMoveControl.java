@@ -170,9 +170,8 @@ public class SlimeMoveControl extends MoveControl {
 
     private void launchStrafeJump(float speed) {
         this.flightSign = this.strafeSign;
-        this.strafeSign = this.slime.getRandom().nextBoolean() ? 1 : -1;
+        this.strafeSign = -this.flightSign; // alternate left/right each jump
 
-        this.mob.setSpeed(speed);
         this.slime.zza = 0.0F;
         this.slime.xxa = this.flightSign * speed;
 

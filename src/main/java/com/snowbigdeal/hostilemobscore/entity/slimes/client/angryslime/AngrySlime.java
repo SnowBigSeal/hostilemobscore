@@ -83,7 +83,7 @@ public class AngrySlime extends BaseSlime<AngrySlime> {
     private static final double BASE_ATTACK_DAMAGE        = 1.0;
     private static final double BASE_KNOCKBACK_RESIST     = 0.6;
     private static final int    XP_REWARD                 = 5;
-    private static final int    TETHER_RADIUS             = 32;
+    private static final int    TETHER_RADIUS             = 64;
     private static final double BASE_SAFE_FALL_DISTANCE   = 20.0;
     private static final double BASE_FALL_DAMAGE_MULTIPLIER = 0.1;
 
@@ -107,7 +107,6 @@ public class AngrySlime extends BaseSlime<AngrySlime> {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         super.registerControllers(controllers);
-        controllers.add(new AnimationController<>(this, "attack", 0, state -> PlayState.STOP));
         controllers.add(new AnimationController<>(this, "slam", 0, state -> PlayState.STOP)
                 .triggerableAnim("slam_windup", ANIM_SLAM_WINDUP)
                 .triggerableAnim("slam_impact", ANIM_SLAM_IMPACT));

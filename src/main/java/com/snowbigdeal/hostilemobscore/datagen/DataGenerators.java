@@ -14,8 +14,10 @@ public class DataGenerators {
         var packOutput = generator.getPackOutput();
         var existingFileHelper = event.getExistingFileHelper();
 
-        generator.addProvider(event.includeClient(), new ModItemModelProvider(packOutput, HostileMobsCore.MODID ,
+        generator.addProvider(event.includeClient(), new ModItemModelProvider(packOutput, HostileMobsCore.MODID,
                 existingFileHelper));
+        generator.addProvider(event.includeClient(), new ModBlockStateProvider(packOutput, existingFileHelper));
+        generator.addProvider(event.includeServer(), new ModRecipeProvider(packOutput, event.getLookupProvider()));
 
     }
 }

@@ -175,6 +175,19 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
         return super.finalizeSpawn(level, difficulty, spawnType, spawnData);
     }
 
+    /**
+     * Fallback for entities that have no saved tether data (e.g. spawned before
+     * tether persistence was added). Sets the tether at the current position so
+     * the mob is always constrained even on its first reload.
+     */
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        if (!this.level().isClientSide() && !this.hasRestriction()) {
+            this.restrictTo(this.blockPosition(), getTetherRadius());
+        }
+    }
+
     /** The tether radius in blocks for this mob type. */
     protected abstract int getTetherRadius();
 

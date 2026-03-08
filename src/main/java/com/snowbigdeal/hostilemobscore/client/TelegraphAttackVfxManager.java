@@ -8,7 +8,6 @@ import com.snowbigdeal.hostilemobscore.attack.shape.ConeShape;
 import com.snowbigdeal.hostilemobscore.attack.shape.LineShape;
 import com.snowbigdeal.hostilemobscore.attack.shape.TelegraphAttackShape;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -24,15 +23,10 @@ import java.util.List;
 @EventBusSubscriber(modid = HostileMobsCore.MODID, value = Dist.CLIENT)
 public class TelegraphAttackVfxManager {
 
-    // ---- Textures ----
-    private static final ResourceLocation TEX_INDICATOR =
-            ResourceLocation.fromNamespaceAndPath(HostileMobsCore.MODID, "textures/vfx/damage_aoe.png");
-    private static final ResourceLocation TEX_RING =
-            ResourceLocation.fromNamespaceAndPath(HostileMobsCore.MODID, "textures/vfx/damage_aoe_ring.png");
-
     // ---- Shared constants ----
     private static final float DECAL_Y_OFFSET  = 0.05f;
     private static final float MIN_RING_RADIUS = 0.05f;
+    private static final float RING_WIDTH      = 0.18f;
     private static final int   SEGMENTS        = 32;
 
     // ---- Circle colours ----
@@ -51,6 +45,8 @@ public class TelegraphAttackVfxManager {
     private static final float LINE_WALL_R = 0.9f, LINE_WALL_G = 0.35f, LINE_WALL_B = 0.0f;
 
     private static final List<VfxInstance> ACTIVE = new ArrayList<>();
+    private static CircleShape lastSlamCircle = null;
+    public static boolean debugKeepLastSlamCircle = false;
 
     // -------------------------------------------------------------------------
     // Public API
@@ -58,6 +54,7 @@ public class TelegraphAttackVfxManager {
 
     public static void spawn(TelegraphAttackShape shape, int lifetimeTicks) {
         ACTIVE.add(new VfxInstance(shape, lifetimeTicks));
+        if (shape instanceof CircleShape cs) lastSlamCircle = cs;
     }
 
     // -------------------------------------------------------------------------
@@ -72,7 +69,7 @@ public class TelegraphAttackVfxManager {
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
-        if (ACTIVE.isEmpty()) return;
+        if (ACTIVE.isEmpty() && !(debugKeepLastSlamCircle && lastSlamCircle != null)) return;
 
         Vec3      cam       = event.getCamera().getPosition();
         PoseStack poseStack = event.getPoseStack();
@@ -98,6 +95,14 @@ public class TelegraphAttackVfxManager {
             poseStack.popPose();
         }
 
+        if (lastSlamCircle != null && debugKeepLastSlamCircle) {
+            poseStack.pushPose();
+            Vec3 c = lastSlamCircle.center();
+            poseStack.translate(c.x - cam.x, c.y - cam.y + DECAL_Y_OFFSET, c.z - cam.z);
+            renderCircleDebug(poseStack, lastSlamCircle);
+            poseStack.popPose();
+        }
+
         RenderSystem.enableCull();
         RenderSystem.depthMask(true);
         RenderSystem.disableBlend();
@@ -110,13 +115,51 @@ public class TelegraphAttackVfxManager {
     private static void renderCircle(PoseStack ps, CircleShape shape, float progress) {
         float radius     = shape.radius();
         float ringRadius = radius * progress;
-
-        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
-        renderGroundQuad(ps, radius, TEX_INDICATOR, IND_R, IND_G, IND_B, IND_A);
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        renderDisc(ps, radius, IND_R, IND_G, IND_B, IND_A);
         if (ringRadius >= MIN_RING_RADIUS) {
-            renderGroundQuad(ps, ringRadius, TEX_RING, RNG_R, RNG_G, RNG_B, RNG_A);
+            renderRing(ps, ringRadius, RNG_R, RNG_G, RNG_B, RNG_A);
         }
         renderCylinder(ps, radius, radius * progress);
+    }
+
+    /** Renders the last slam circle as a static ghost overlay (blue tint) for debug purposes. */
+    private static void renderCircleDebug(PoseStack ps, CircleShape shape) {
+        float radius = shape.radius();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        renderDisc(ps, radius, 0.1f, 0.4f, 1.0f, 0.35f);
+        renderRing(ps, radius, 0.2f, 0.6f, 1.0f, 0.7f);
+        renderCylinder(ps, radius, radius * 0.3f);
+    }
+
+    /** Filled disc: opaque at center, transparent at edge. */
+    private static void renderDisc(PoseStack ps, float radius,
+                                   float r, float g, float b, float a) {
+        Matrix4f mx = ps.last().pose();
+        BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
+        buf.addVertex(mx, 0, 0, 0).setColor(r, g, b, a);
+        for (int i = 0; i <= SEGMENTS; i++) {
+            double angle = i * 2.0 * Math.PI / SEGMENTS;
+            buf.addVertex(mx, (float)(Math.cos(angle) * radius), 0, (float)(Math.sin(angle) * radius))
+               .setColor(r, g, b, 0.0f);
+        }
+        BufferUploader.drawWithShader(buf.buildOrThrow());
+    }
+
+    /** Thin ring (annulus) at the given radius. */
+    private static void renderRing(PoseStack ps, float radius,
+                                   float r, float g, float b, float a) {
+        if (radius < MIN_RING_RADIUS) return;
+        float inner = Math.max(0, radius - RING_WIDTH);
+        Matrix4f mx = ps.last().pose();
+        BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        for (int i = 0; i <= SEGMENTS; i++) {
+            double angle = i * 2.0 * Math.PI / SEGMENTS;
+            float cx = (float) Math.cos(angle), cz = (float) Math.sin(angle);
+            buf.addVertex(mx, cx * radius, 0, cz * radius).setColor(r, g, b, a);
+            buf.addVertex(mx, cx * inner,  0, cz * inner ).setColor(r, g, b, 0.0f);
+        }
+        BufferUploader.drawWithShader(buf.buildOrThrow());
     }
 
     // -------------------------------------------------------------------------
@@ -228,19 +271,6 @@ public class TelegraphAttackVfxManager {
     // Shared helpers
     // -------------------------------------------------------------------------
 
-    private static void renderGroundQuad(PoseStack ps, float radius,
-                                         ResourceLocation texture,
-                                         float r, float g, float b, float a) {
-        RenderSystem.setShaderTexture(0, texture);
-        Matrix4f mx = ps.last().pose();
-        BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        buf.addVertex(mx, -radius, 0, -radius).setUv(0, 0).setColor(r, g, b, a);
-        buf.addVertex(mx, -radius, 0,  radius).setUv(0, 1).setColor(r, g, b, a);
-        buf.addVertex(mx,  radius, 0,  radius).setUv(1, 1).setColor(r, g, b, a);
-        buf.addVertex(mx,  radius, 0, -radius).setUv(1, 0).setColor(r, g, b, a);
-        BufferUploader.drawWithShader(buf.buildOrThrow());
-    }
-
     private static void renderCylinder(PoseStack ps, float radius, float height) {
         if (height < 0.01f) return;
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
@@ -257,7 +287,6 @@ public class TelegraphAttackVfxManager {
             buf.addVertex(mx, x2, 0,      z2).setColor(CYL_R, CYL_G, CYL_B, 0.55f);
         }
         BufferUploader.drawWithShader(buf.buildOrThrow());
-        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
     }
 
     // -------------------------------------------------------------------------

@@ -3,12 +3,6 @@ package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
-
-import java.util.Comparator;
-import java.util.List;
 
 /**
  * Registers the slam attack as an orchestrator-managed action for {@link AngrySlime}.

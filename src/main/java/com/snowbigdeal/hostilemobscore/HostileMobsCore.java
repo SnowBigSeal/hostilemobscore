@@ -1,13 +1,16 @@
 package com.snowbigdeal.hostilemobscore;
 
+import com.snowbigdeal.hostilemobscore.block.ModBlocks;
 import com.snowbigdeal.hostilemobscore.choreography.AttackRegistry;
 import com.snowbigdeal.hostilemobscore.client.TelegraphAttackVfxManager;
 import com.snowbigdeal.hostilemobscore.datapack.BossSequenceLoader;
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.AngrySlimeRenderer;
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlimeSlamAttackBehaviour;
+import com.snowbigdeal.hostilemobscore.items.ModComponents;
 import com.snowbigdeal.hostilemobscore.items.ModItems;
 import com.snowbigdeal.hostilemobscore.network.TelegraphAttackPacket;
+import com.snowbigdeal.hostilemobscore.recipe.ModRecipes;
 import com.snowbigdeal.hostilemobscore.sounds.ModSounds;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.resources.ResourceLocation;
@@ -44,9 +47,13 @@ public class HostileMobsCore {
 
         ModEntities.register(modEventBus);
         ModItems.register(modEventBus);
+        ModComponents.register(modEventBus);
         ModSounds.register(modEventBus);
-
+        ModBlocks.register(modEventBus);
+        ModRecipes.register(modEventBus);
+        ModCreativeTabs.register(modEventBus);
         modEventBus.addListener(this::addCreative);
+
         modContainer.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
         modContainer.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
@@ -87,3 +94,4 @@ public class HostileMobsCore {
         }
     }
 }
+

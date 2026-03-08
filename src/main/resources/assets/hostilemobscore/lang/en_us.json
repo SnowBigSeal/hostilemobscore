@@ -1,7 +1,14 @@
 {
   "itemGroup.hostilemobscore": "Example Mod Tab",
+  "itemGroup.hostilemobscore.hostile_mobs": "Hostile Mobs",
+  "entity.hostilemobscore.angry_slime": "Angry Slime",
+  "item.hostilemobscore.angry_slime_spawn_egg": "Angry Slime Spawn Egg",
   "block.hostilemobscore.example_block": "Example Block",
   "item.hostilemobscore.example_item": "Example Item",
+  "item.hostilemobscore.slimeball": "Slimeball",
+  "item.hostilemobscore.slimeball.suffix": " Slimeball",
+  "block.hostilemobscore.colored_slime_block": "Slime Block",
+  "block.hostilemobscore.colored_slime_block.suffix": " Slime Block",
 
   "hostilemobscore.configuration.title": "Hostile Mobs Core Configs",
   "hostilemobscore.configuration.section.hostilemobscore.common.toml": "Hostile Mobs Core Configs",

@@ -22,11 +22,11 @@ public class ModSpawnEvents {
             (type, level, spawnType, pos, random) -> {
                 if (level.getDifficulty() == Difficulty.PEACEFUL) return false;
                 AABB box = AABB.unitCubeFromLowerCorner(pos.getCenter()).inflate(48);
-                boolean tooClose = !level.getEntitiesOfClass(
+                int nearbyCount = level.getEntitiesOfClass(
                     ModEntities.ANGRY_SLIME.get().create(level.getLevel()).getClass(),
                     box, e -> true
-                ).isEmpty();
-                return !tooClose;
+                ).size();
+                return nearbyCount < 4;
             },
             RegisterSpawnPlacementsEvent.Operation.OR
         );

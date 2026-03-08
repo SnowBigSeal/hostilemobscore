@@ -86,8 +86,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
         if (!wasOnGround && this.onGround()) {
             SoundEvent land = getLandSound();
             if (land != null) {
-                this.playSound(land, this.getSoundVolume(),
-                        (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
+                playSound(land, this.getSoundVolume(), 1.0F);
             }
         }
         wasOnGround = this.onGround();
