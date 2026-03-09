@@ -1,6 +1,7 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
 
 import com.snowbigdeal.hostilemobscore.Constants;
+import com.snowbigdeal.hostilemobscore.entity.ModEntities;
 import com.snowbigdeal.hostilemobscore.entity.slimes.BaseSlime;
 import com.snowbigdeal.hostilemobscore.entity.slimes.SlimeMoveControl;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
@@ -59,6 +60,11 @@ public class AngrySlime extends BaseSlime<AngrySlime> {
 
     @Override
     protected int getTetherRadius() { return TETHER_RADIUS; }
+
+    @Override
+    protected EntityType<? extends BaseSlime<?>> getCompanionType() {
+        return ModEntities.SLEEPY_SLIME.get();
+    }
 
     // -------------------------------------------------------------------------
     // Attributes

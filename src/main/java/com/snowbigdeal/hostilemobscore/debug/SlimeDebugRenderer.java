@@ -2,7 +2,7 @@ package com.snowbigdeal.hostilemobscore.debug;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.AngrySlime;
+import com.snowbigdeal.hostilemobscore.entity.HostileMob;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -40,14 +40,16 @@ public class SlimeDebugRenderer {
         double camX = camPos.x, camY = camPos.y, camZ = camPos.z;
 
         AABB searchBox = mc.player.getBoundingBox().inflate(128);
-        List<AngrySlime> slimes = mc.level.getEntitiesOfClass(AngrySlime.class, searchBox);
+        @SuppressWarnings("unchecked")
+        List<HostileMob<?>> slimes = mc.level.getEntitiesOfClass(
+                (Class<HostileMob<?>>) (Class<?>) HostileMob.class, searchBox);
 
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         VertexConsumer lines = buffers.getBuffer(RenderType.lines());
         PoseStack poseStack = event.getPoseStack();
 
         if (ACTIVE_MODES.contains("tether")) {
-            for (AngrySlime slime : slimes) {
+            for (HostileMob<?> slime : slimes) {
                 BlockPos anchor = slime.getSyncedTetherCenter();
                 double ax = anchor.getX() + 0.5 - camX;
                 double ay = anchor.getY() - camY;
@@ -65,18 +67,18 @@ public class SlimeDebugRenderer {
         }
 
         if (ACTIVE_MODES.contains("party")) {
-            Map<UUID, List<AngrySlime>> parties = new HashMap<>();
-            for (AngrySlime slime : slimes) {
+            Map<UUID, List<HostileMob<?>>> parties = new HashMap<>();
+            for (HostileMob<?> slime : slimes) {
                 slime.getSyncedPartyId().ifPresent(id ->
                         parties.computeIfAbsent(id, k -> new ArrayList<>()).add(slime));
             }
-            for (Map.Entry<UUID, List<AngrySlime>> entry : parties.entrySet()) {
+            for (Map.Entry<UUID, List<HostileMob<?>>> entry : parties.entrySet()) {
                 float[] col = partyColor(entry.getKey());
-                List<AngrySlime> members = entry.getValue();
+                List<HostileMob<?>> members = entry.getValue();
                 for (int i = 0; i < members.size(); i++) {
                     for (int j = i + 1; j < members.size(); j++) {
-                        AngrySlime a = members.get(i);
-                        AngrySlime b = members.get(j);
+                        HostileMob<?> a = members.get(i);
+                        HostileMob<?> b = members.get(j);
                         drawLine(poseStack, lines,
                                 a.getX() - camX, a.getY() + 1.0 - camY, a.getZ() - camZ,
                                 b.getX() - camX, b.getY() + 1.0 - camY, b.getZ() - camZ,

@@ -1,11 +1,16 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes;
 
 import com.snowbigdeal.hostilemobscore.entity.HostileMob;
+import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.Vec3;
 import net.tslat.smartbrainlib.api.core.BrainActivityGroup;
 import net.tslat.smartbrainlib.api.core.behaviour.FirstApplicableBehaviour;
@@ -14,8 +19,10 @@ import net.tslat.smartbrainlib.api.core.behaviour.custom.misc.Idle;
 import net.tslat.smartbrainlib.api.core.behaviour.custom.target.InvalidateAttackTarget;
 import net.tslat.smartbrainlib.api.core.behaviour.custom.target.SetPlayerLookTarget;
 import net.tslat.smartbrainlib.api.core.behaviour.custom.target.SetRandomLookTarget;
+import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 
 /**
@@ -40,6 +47,55 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     protected static final int   JUMP_DELAY_RANGE      = 15;
 
     // -------------------------------------------------------------------------
+    // Mixed-pack companion spawning
+    // -------------------------------------------------------------------------
+
+    private static final float MIXED_PACK_CHANCE = 0.30f;
+    private static final int   MIXED_PACK_MAX    = 2;
+    private static final ThreadLocal<Boolean> SPAWNING_COMPANIONS = ThreadLocal.withInitial(() -> false);
+
+    /**
+     * Override to return the companion slime type to occasionally spawn alongside
+     * this mob on natural spawns. Return {@code null} for no companion.
+     */
+    @Nullable
+    protected EntityType<? extends BaseSlime<?>> getCompanionType() { return null; }
+
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty,
+                                        MobSpawnType spawnType, @Nullable SpawnGroupData spawnData) {
+        SpawnGroupData result = super.finalizeSpawn(level, difficulty, spawnType, spawnData);
+
+        EntityType<? extends BaseSlime<?>> companionType = getCompanionType();
+        if (!level.isClientSide()
+                && !SPAWNING_COMPANIONS.get()
+                && companionType != null
+                && spawnData == null
+                && (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION)
+                && this.random.nextFloat() < MIXED_PACK_CHANCE) {
+            SPAWNING_COMPANIONS.set(true);
+            try {
+                int count = 1 + this.random.nextInt(MIXED_PACK_MAX);
+                for (int i = 0; i < count; i++) {
+                    BaseSlime<?> companion = companionType.create(level.getLevel());
+                    if (companion == null) continue;
+                    int dx = this.random.nextInt(9) - 4;
+                    int dz = this.random.nextInt(9) - 4;
+                    BlockPos pos = this.blockPosition().offset(dx, 0, dz);
+                    companion.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
+                            this.getYRot(), 0f);
+                    companion.finalizeSpawn(level, difficulty, spawnType, result);
+                    level.addFreshEntity(companion);
+                }
+            } finally {
+                SPAWNING_COMPANIONS.set(false);
+            }
+        }
+
+        return result;
+    }
+
+    // -------------------------------------------------------------------------
     // Animation
     // -------------------------------------------------------------------------
 
@@ -47,7 +103,6 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
 
     private static final RawAnimation ANIM_IDLE  = RawAnimation.begin().thenLoop("idle");
     private static final RawAnimation ANIM_HOP   = RawAnimation.begin().thenLoop("hop");
-    private static final RawAnimation ANIM_FLOAT = RawAnimation.begin().thenLoop("float");
 
     // -------------------------------------------------------------------------
     // Sounds — subclasses override to supply their specific sound events
@@ -133,8 +188,8 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "movement", ANIM_MOVEMENT_TRANSITION, state -> {
             var slime = state.getAnimatable();
-            if (slime.onGround() && slime.isInWater()) {
-                return state.setAndContinue(ANIM_FLOAT);
+            if (slime.isInWater()) {
+                return PlayState.STOP;
             }
             if (state.isMoving() || !slime.onGround()) {
                 return state.setAndContinue(ANIM_HOP);
@@ -151,8 +206,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     public BrainActivityGroup<T> getCoreTasks() {
         return BrainActivityGroup.coreTasks(
                 new LookAtAttackTarget<>(),
-                new SlimeMoveBehaviour<>(),
-                new SlimeReturnHomeBehaviour<>()
+                new SlimeMoveBehaviour<>()
         );
     }
 
@@ -173,8 +227,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
                         (slime, target) -> {
                             if (target instanceof Player player && player.getAbilities().invulnerable) return true;
                             double followRange = slime.getAttributeValue(Attributes.FOLLOW_RANGE);
-                            if (slime.distanceToSqr(target) > followRange * followRange) return true;
-                            return !slime.isWithinRestriction();
+                            return slime.distanceToSqr(target) > followRange * followRange;
                         }),
                 getAttackBehaviours()
         );
@@ -185,4 +238,14 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
      * {@link FirstApplicableBehaviour}.
      */
     protected abstract FirstApplicableBehaviour<T> getAttackBehaviours();
+
+    @Override
+    protected void applyReturnMovement() {
+        if (!(getMoveControl() instanceof SlimeMoveControl smc)) return;
+        double dx = getRestrictCenter().getX() + 0.5 - getX();
+        double dz = getRestrictCenter().getZ() + 0.5 - getZ();
+        float yRot = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0f;
+        smc.setDirection(yRot, true);
+        smc.setWantedMovement(2.5);
+    }
 }

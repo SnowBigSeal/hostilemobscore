@@ -108,7 +108,7 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
 
         slime.slamCooldown = COOLDOWN_TICKS + slime.getRandom().nextInt(COOLDOWN_VARIANCE);
 
-        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setSlamLock(true);
+        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setAttackLock(true);
     }
 
     @Override
@@ -144,7 +144,7 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
 
     @Override
     protected void onStop(AngrySlime slime) {
-        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setSlamLock(false);
+        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setAttackLock(false);
         slime.notifyOrchestratedSlamComplete();
         slamTarget   = null;
         slamPosition = null;

@@ -33,8 +33,8 @@ public class SlimeMoveControl extends MoveControl {
     /** Minimum clearance (blocks) above head needed to wander-jump — derived from JUMP_POWER_WANDER. */
     private static final double WANDER_JUMP_CLEARANCE = 0.6;
 
-    // When true, slam behaviour controls physics directly — hop logic is suppressed
-    private boolean slamLock = false;
+    // When true, attack behaviour controls physics directly — hop logic is suppressed
+    private boolean attackLock = false;
 
     public SlimeMoveControl(BaseSlime<?> slime) {
         super(slime);
@@ -68,8 +68,8 @@ public class SlimeMoveControl extends MoveControl {
         return this.leapForce;
     }
 
-    public void setSlamLock(boolean locked) {
-        this.slamLock = locked;
+    public void setAttackLock(boolean locked) {
+        this.attackLock = locked;
     }
 
     public void setWantedMovement(double speed) {
@@ -81,7 +81,7 @@ public class SlimeMoveControl extends MoveControl {
     public void tick() {
         faceTargetDirection();
 
-        if (this.slamLock) return; // slam behaviour owns physics during this window
+        if (this.attackLock) return; // attack behaviour owns physics during this window
 
         if (this.operation != Operation.MOVE_TO) {
             clearMovementInput();

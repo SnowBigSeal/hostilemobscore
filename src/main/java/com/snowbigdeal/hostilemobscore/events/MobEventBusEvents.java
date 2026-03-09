@@ -3,6 +3,7 @@ package com.snowbigdeal.hostilemobscore.events;
 import com.snowbigdeal.hostilemobscore.ServerConfig;
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.AngrySlime;
+import com.snowbigdeal.hostilemobscore.entity.slimes.client.sleepyslime.SleepySlime;
 import com.snowbigdeal.hostilemobscore.HostileMobsCore;
 import com.snowbigdeal.hostilemobscore.items.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -25,6 +26,7 @@ public class MobEventBusEvents {
     @SubscribeEvent
     public static void entityAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(ModEntities.ANGRY_SLIME.get(), AngrySlime.createAttributes().build());
+        event.put(ModEntities.SLEEPY_SLIME.get(), SleepySlime.createAttributes().build());
     }
 
     @SubscribeEvent

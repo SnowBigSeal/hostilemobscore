@@ -4,48 +4,47 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
 
 /**
  * Per-level singleton that manages all active {@link MobParty} instances.
  *
- * <p>Responsibilities:
- * <ul>
- *   <li>Form parties when mobs share an aggro target within {@link #PARTY_JOIN_RADIUS}.</li>
- *   <li>Merge parties that converge on the same target.</li>
- *   <li>Pull from each party's attack queue once per {@link #QUEUE_PULL_INTERVAL} ticks.</li>
- *   <li>Disband empty parties and clean up dead members.</li>
- * </ul>
+ * <p>Parties are <em>static</em> — they form at spawn time (via
+ * {@link #enrollOnSpawn}) and persist until all members die. Members never
+ * leave or join mid-combat; the party roster is fixed at world-join.
  *
- * <p>Each party maintains a round-robin queue of its members. Every second the orchestrator
- * dequeues the front mob. If that mob's internal cooldown is ready it fires its action;
- * otherwise it silently passes. The mob is then re-enqueued at the back. A no-op entry
- * is randomly appended after a successful attack to add artificial delay between rounds.
+ * <p>When any party member aggroes a target, {@link #onMobTargetChanged}
+ * propagates that target to every other living party member so the whole
+ * group engages together.
+ *
+ * <p>The attack queue is round-robin: once per {@link #QUEUE_PULL_INTERVAL}
+ * ticks the orchestrator dequeues the front member, fires its action if
+ * ready, and re-enqueues it at the back. Queue pulls are skipped while the
+ * party has no shared target.
  */
 public class AttackOrchestrator {
 
-    private static final double PARTY_JOIN_RADIUS   = 24.0;
-    /** Ticks between queue pulls — one pull per second at 20 TPS. */
-    private static final int    QUEUE_PULL_INTERVAL = 20;
-    /** Probability (0–1) that a no-op slot is appended after a successful attack dispatch. */
-    private static final double NOOP_CHANCE         = 0.4;
+    /** Radius (blocks) used when searching for a party to join at spawn. */
+    private static final double SPAWN_JOIN_RADIUS = 12.0;
+    /** Ticks between queue pulls — one pull per 2 seconds at 20 TPS. */
+    private static final int    QUEUE_PULL_INTERVAL = 40;
 
     private static final Map<ResourceKey<Level>, AttackOrchestrator> INSTANCES = new HashMap<>();
 
+    /** Prevents recursive target propagation (A→B→A). */
+    private static final ThreadLocal<Boolean> PROPAGATING_TARGET =
+            ThreadLocal.withInitial(() -> false);
+
     private final Map<UUID, MobParty> parties    = new LinkedHashMap<>();
     private final Map<UUID, UUID>     mobToParty = new HashMap<>();
-    private final Random              random     = new Random();
 
     private AttackOrchestrator() {}
 
@@ -69,15 +68,68 @@ public class AttackOrchestrator {
     // Party lifecycle — called from events
     // -------------------------------------------------------------------------
 
-    public void onMobTargetChanged(Mob mob, LivingEntity newTarget) {
+    /**
+     * Called when an {@link IOrchestrated} mob joins the level (spawn or chunk load).
+     * Searches for a nearby existing party within {@link #SPAWN_JOIN_RADIUS} blocks and
+     * joins it; if none is found, a new solo party is created for this mob.
+     */
+    public void enrollOnSpawn(Mob mob) {
         if (!(mob instanceof IOrchestrated)) return;
+        if (mobToParty.containsKey(mob.getUUID())) return; // already enrolled
 
-        if (newTarget == null) {
-            removeMobFromParty(mob);
-            return;
+        // Find the nearest existing party within range
+        List<Mob> nearbyInParty = mob.level().getEntitiesOfClass(
+                Mob.class,
+                mob.getBoundingBox().inflate(SPAWN_JOIN_RADIUS),
+                other -> other != mob
+                      && other instanceof IOrchestrated
+                      && mobToParty.containsKey(other.getUUID()));
+
+        MobParty party = null;
+        for (Mob nearby : nearbyInParty) {
+            UUID nearbyPartyId = mobToParty.get(nearby.getUUID());
+            if (nearbyPartyId != null) {
+                party = parties.get(nearbyPartyId);
+                if (party != null) break;
+            }
         }
 
-        tryJoinOrCreateParty(mob, newTarget);
+        if (party == null) {
+            party = new MobParty(UUID.randomUUID());
+            parties.put(party.getPartyId(), party);
+        }
+
+        enrollMob(mob, party);
+    }
+
+    /**
+     * Called when a party member acquires a target.
+     * Sets the party's shared target and propagates it to all other living members.
+     * Target-loss (null) is ignored — parties are static and persist between fights.
+     */
+    public void onMobTargetChanged(Mob mob, LivingEntity newTarget) {
+        if (!(mob instanceof IOrchestrated) || newTarget == null) return;
+
+        UUID partyId = mobToParty.get(mob.getUUID());
+        if (partyId == null) return;
+        MobParty party = parties.get(partyId);
+        if (party == null) return;
+
+        party.setSharedTarget(newTarget);
+
+        if (!PROPAGATING_TARGET.get()) {
+            PROPAGATING_TARGET.set(true);
+            try {
+                for (Mob member : party.getMembers().values()) {
+                    if (member == mob || !member.isAlive()) continue;
+                    if (member.getTarget() == newTarget) continue;
+                    member.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, newTarget);
+                    member.setTarget(newTarget);
+                }
+            } finally {
+                PROPAGATING_TARGET.set(false);
+            }
+        }
     }
 
     public void onMobDied(Mob mob) {
@@ -92,7 +144,8 @@ public class AttackOrchestrator {
     public void tick(ServerLevel level) {
         List<UUID> toDisband = new ArrayList<>();
 
-        for (MobParty party : parties.values()) {
+        List<MobParty> snapshot = new ArrayList<>(parties.values());
+        for (MobParty party : snapshot) {
             tickParty(party, toDisband);
         }
 
@@ -100,56 +153,8 @@ public class AttackOrchestrator {
     }
 
     // -------------------------------------------------------------------------
-    // Internal — party formation
+    // Internal — enrol
     // -------------------------------------------------------------------------
-
-    private void tryJoinOrCreateParty(Mob mob, LivingEntity target) {
-        UUID targetId = target.getUUID();
-
-        List<Mob> sameTargetNearby = mob.level().getEntitiesOfClass(
-                Mob.class,
-                mob.getBoundingBox().inflate(PARTY_JOIN_RADIUS),
-                other -> other != mob
-                      && other instanceof IOrchestrated
-                      && other.getTarget() != null
-                      && other.getTarget().getUUID().equals(targetId));
-
-        Set<UUID> involvedPartyIds = new LinkedHashSet<>();
-        UUID myPartyId = mobToParty.get(mob.getUUID());
-        if (myPartyId != null) involvedPartyIds.add(myPartyId);
-        for (Mob nearby : sameTargetNearby) {
-            UUID nearbyPartyId = mobToParty.get(nearby.getUUID());
-            if (nearbyPartyId != null) involvedPartyIds.add(nearbyPartyId);
-        }
-
-        MobParty survivingParty;
-        Iterator<UUID> it = involvedPartyIds.iterator();
-        if (it.hasNext()) {
-            survivingParty = parties.get(it.next());
-            while (it.hasNext()) {
-                UUID otherId = it.next();
-                MobParty other = parties.remove(otherId);
-                if (other == null) continue;
-
-                for (Map.Entry<UUID, Mob> entry : other.getMembers().entrySet()) {
-                    mobToParty.put(entry.getKey(), survivingParty.getPartyId());
-                    if (entry.getValue() instanceof IOrchestrated o) {
-                        o.setPartyId(survivingParty.getPartyId());
-                    }
-                }
-                survivingParty.merge(other);
-            }
-        } else {
-            survivingParty = new MobParty(UUID.randomUUID());
-            parties.put(survivingParty.getPartyId(), survivingParty);
-        }
-
-        survivingParty.setSharedTarget(target);
-        enrollMob(mob, survivingParty);
-        for (Mob nearby : sameTargetNearby) {
-            enrollMob(nearby, survivingParty);
-        }
-    }
 
     private void enrollMob(Mob mob, MobParty party) {
         UUID currentPartyId = mobToParty.get(mob.getUUID());
@@ -161,7 +166,8 @@ public class AttackOrchestrator {
         }
 
         party.addMember(mob);
-        party.enqueue(mob.getUUID()); // place at the back of the rotation
+        party.enqueue(mob.getUUID());
+        party.enqueueNoop();
         mobToParty.put(mob.getUUID(), party.getPartyId());
         if (mob instanceof IOrchestrated o) {
             o.setPartyId(party.getPartyId());
@@ -207,6 +213,12 @@ public class AttackOrchestrator {
             return;
         }
 
+        // Clear stale shared target
+        LivingEntity sharedTarget = party.getSharedTarget();
+        if (sharedTarget != null && (!sharedTarget.isAlive() || sharedTarget.isRemoved())) {
+            party.setSharedTarget(null);
+        }
+
         // Poll active assignments for completion
         for (Map.Entry<UUID, Mob> entry : party.getMembers().entrySet()) {
             UUID mobId = entry.getKey();
@@ -223,6 +235,9 @@ public class AttackOrchestrator {
             }
         }
 
+        // Skip queue pulls while the party has no target
+        if (party.getSharedTarget() == null) return;
+
         // Pull one entry from the attack queue every QUEUE_PULL_INTERVAL ticks
         if (party.decrementQueuePullIn() <= 0) {
             party.resetQueuePullIn(QUEUE_PULL_INTERVAL);
@@ -233,8 +248,8 @@ public class AttackOrchestrator {
     /**
      * Dequeues the front entry. No-ops are discarded (they exist only to add delay).
      * For mob entries: the mob is unconditionally re-enqueued at the back, then dispatched
-     * if its action is ready. If it is not ready it silently passes its turn.
-     * A no-op is randomly appended after every successful dispatch.
+     * if its action is ready. A no-op is always appended after a successful dispatch so
+     * turns are separated by at least one dead pull (~1 second).
      */
     private void pullFromQueue(MobParty party) {
         UUID id = party.pollQueue();
@@ -260,10 +275,7 @@ public class AttackOrchestrator {
             party.setActiveAssignment(id, assignment);
             o.setPendingAction(assignment);
             action.beginAction(mob, target);
-
-            if (random.nextDouble() < NOOP_CHANCE) {
-                party.enqueueNoop();
-            }
+            party.enqueueNoop();
             break;
         }
     }

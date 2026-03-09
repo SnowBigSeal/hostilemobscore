@@ -9,19 +9,23 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.phys.Vec3;
 import net.tslat.smartbrainlib.api.SmartBrainOwner;
 import net.tslat.smartbrainlib.api.core.SmartBrainProvider;
 import net.tslat.smartbrainlib.api.core.sensor.ExtendedSensor;
 import net.tslat.smartbrainlib.api.core.sensor.vanilla.HurtBySensor;
 import net.tslat.smartbrainlib.api.core.sensor.vanilla.NearbyLivingEntitySensor;
+import net.tslat.smartbrainlib.util.BrainUtils;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -114,10 +118,25 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
     @Override public void             setPendingAction(OrchestratorAction a) { this.pendingAction = a; }
 
     // -------------------------------------------------------------------------
+    // Return-home constants
+    // -------------------------------------------------------------------------
+
+    /** Distance² (blocks²) at which the mob is considered home (5 blocks). */
+    private static final double HOME_DIST_SQ      = 25.0;
+    /** Distance² (blocks²) from anchor at which disengagement triggers a return-home walk. */
+    private static final double DISENGAGE_DIST_SQ = 256.0; // 16 blocks
+    /** Ticks before a stuck returning mob despawns (30 seconds). */
+    private static final int    RETURN_TIMEOUT    = 600;
+    /** Ticks without a player hit before the mob disengages (30 seconds). */
+    private static final int    HIT_TIMER_MAX     = 600;
+
+    // -------------------------------------------------------------------------
     // Return-home flag (used by ReturnHomeBehaviour)
     // -------------------------------------------------------------------------
 
-    private boolean returningHome = false;
+    private boolean returningHome      = false;
+    private int     returnHomeTimeout  = 0;
+    private int     lastPlayerHitTimer = 0;
 
     public boolean isReturningHome()          { return returningHome; }
     public void    setReturningHome(boolean v) { this.returningHome = v; }
@@ -192,12 +211,64 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
     protected abstract int getTetherRadius();
 
     @Override
+    public boolean hurt(DamageSource source, float amount) {
+        boolean damaged = super.hurt(source, amount);
+        if (damaged && source.getEntity() instanceof Player p && !p.getAbilities().invulnerable) {
+            lastPlayerHitTimer = HIT_TIMER_MAX;
+        }
+        return damaged;
+    }
+
+    @Override
     protected void customServerAiStep() {
+        if (returningHome) {
+            if (getTarget() != null) {
+                setTarget(null);
+                BrainUtils.clearMemory(this, MemoryModuleType.ATTACK_TARGET);
+            }
+            double distSq = distanceToSqr(Vec3.atCenterOf(getRestrictCenter()));
+            if (distSq <= HOME_DIST_SQ) {
+                returningHome      = false;
+                returnHomeTimeout  = 0;
+                lastPlayerHitTimer = 0;
+                setInvulnerable(false);
+                setHealth(getMaxHealth());
+            } else if (++returnHomeTimeout >= RETURN_TIMEOUT) {
+                discard();
+                return;
+            } else {
+                applyReturnMovement();
+            }
+            tickBrain(typedSelf());
+            return;
+        }
+
+        // Last-hit timer: disengage if a player hasn't damaged this mob in 30 seconds
+        if (lastPlayerHitTimer > 0) {
+            if (getTarget() == null) {
+                lastPlayerHitTimer = 0;
+            } else if (--lastPlayerHitTimer == 0) {
+                BrainUtils.clearMemory(this, MemoryModuleType.ATTACK_TARGET);
+                setTarget(null);
+                if (distanceToSqr(Vec3.atCenterOf(getRestrictCenter())) > DISENGAGE_DIST_SQ) {
+                    returningHome     = true;
+                    returnHomeTimeout = 0;
+                    setInvulnerable(true);
+                }
+            }
+        }
+
         if (this.getTarget() instanceof Player p && p.getAbilities().invulnerable) {
             this.setTarget(null);
         }
         tickBrain(typedSelf());
     }
+
+    /**
+     * Called each tick while this mob is returning to its tether anchor.
+     * Drive your movement controller toward {@link #getRestrictCenter()} here.
+     */
+    protected abstract void applyReturnMovement();
 
     /** Type-safe self-reference for SmartBrainOwner. */
     @SuppressWarnings("unchecked")

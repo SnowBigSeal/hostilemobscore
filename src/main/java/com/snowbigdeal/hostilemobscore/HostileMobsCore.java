@@ -5,7 +5,8 @@ import com.snowbigdeal.hostilemobscore.choreography.AttackRegistry;
 import com.snowbigdeal.hostilemobscore.client.TelegraphAttackVfxManager;
 import com.snowbigdeal.hostilemobscore.datapack.BossSequenceLoader;
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
-import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.AngrySlimeRenderer;
+import com.snowbigdeal.hostilemobscore.entity.slimes.client.SlimeModel;
+import com.snowbigdeal.hostilemobscore.entity.slimes.client.SlimeRenderer;
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlimeSlamAttackBehaviour;
 import com.snowbigdeal.hostilemobscore.items.ModComponents;
 import com.snowbigdeal.hostilemobscore.items.ModItems;
@@ -79,6 +80,7 @@ public class HostileMobsCore {
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(ModItems.ANGRY_SLIME_SPAWN_EGG.get());
+            event.accept(ModItems.SLEEPY_SLIME_SPAWN_EGG.get());
         }
     }
 
@@ -90,7 +92,8 @@ public class HostileMobsCore {
     public static class ClientModEvents {
         @SubscribeEvent
         public static void onClientSetup(FMLCommonSetupEvent event) {
-            EntityRenderers.register(ModEntities.ANGRY_SLIME.get(), AngrySlimeRenderer::new);
+            EntityRenderers.register(ModEntities.ANGRY_SLIME.get(),  SlimeRenderer.factory("angryslime"));
+            EntityRenderers.register(ModEntities.SLEEPY_SLIME.get(), SlimeRenderer.factory("sleepyslime"));
         }
     }
 }

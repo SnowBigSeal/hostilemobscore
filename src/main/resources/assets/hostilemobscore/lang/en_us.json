@@ -3,6 +3,8 @@
   "itemGroup.hostilemobscore.hostile_mobs": "Hostile Mobs",
   "entity.hostilemobscore.angry_slime": "Angry Slime",
   "item.hostilemobscore.angry_slime_spawn_egg": "Angry Slime Spawn Egg",
+  "entity.hostilemobscore.sleepy_slime": "Sleepy Slime",
+  "item.hostilemobscore.sleepy_slime_spawn_egg": "Sleepy Slime Spawn Egg",
   "block.hostilemobscore.example_block": "Example Block",
   "item.hostilemobscore.example_item": "Example Item",
   "item.hostilemobscore.slimeball": "Slimeball",
