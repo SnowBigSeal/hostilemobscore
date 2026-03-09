@@ -58,6 +58,14 @@ public class OrchestratorSyncBehaviour<T extends HostileMob<T>> extends Extended
 
         BrainUtils.setMemory(entity, MemoryModuleType.ATTACK_TARGET, sharedTarget);
         entity.setTarget(sharedTarget);
+
+        // Seed the deaggro timer so DeaggroBehaviour starts for this mob.
+        // Without this, mobs that pick up the party target here (rather than through
+        // TetheredTargetBehaviour or a direct hit) would never have HIT_TIMER set
+        // and would never deaggro.
+        if (!BrainUtils.hasMemory(entity, ModMemoryTypes.HIT_TIMER.get())) {
+            BrainUtils.setMemory(entity, ModMemoryTypes.HIT_TIMER.get(), HostileMob.HIT_TIMER_MAX);
+        }
     }
 
     private LivingEntity getSharedTarget(T entity, ServerLevel level) {
