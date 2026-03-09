@@ -5,7 +5,6 @@ import com.snowbigdeal.hostilemobscore.choreography.AttackRegistry;
 import com.snowbigdeal.hostilemobscore.client.TelegraphAttackVfxManager;
 import com.snowbigdeal.hostilemobscore.datapack.BossSequenceLoader;
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
-import com.snowbigdeal.hostilemobscore.entity.slimes.client.SlimeModel;
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.SlimeRenderer;
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlimeSlamAttackBehaviour;
 import com.snowbigdeal.hostilemobscore.items.ModComponents;

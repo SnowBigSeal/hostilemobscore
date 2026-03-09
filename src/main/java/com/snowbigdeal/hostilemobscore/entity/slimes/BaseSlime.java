@@ -11,6 +11,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.tslat.smartbrainlib.api.core.BrainActivityGroup;
 import net.tslat.smartbrainlib.api.core.behaviour.FirstApplicableBehaviour;
@@ -81,8 +82,11 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
                     if (companion == null) continue;
                     int dx = this.random.nextInt(9) - 4;
                     int dz = this.random.nextInt(9) - 4;
-                    BlockPos pos = this.blockPosition().offset(dx, 0, dz);
-                    companion.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
+                    BlockPos surface = level.getHeightmapPos(
+                            Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                            this.blockPosition().offset(dx, 0, dz));
+                    if (!level.getBlockState(surface.below()).isSolid()) continue;
+                    companion.moveTo(surface.getX() + 0.5, surface.getY(), surface.getZ() + 0.5,
                             this.getYRot(), 0f);
                     companion.finalizeSpawn(level, difficulty, spawnType, result);
                     level.addFreshEntity(companion);
