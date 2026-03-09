@@ -1,5 +1,6 @@
 package com.snowbigdeal.hostilemobscore.orchestrator;
 
+import com.snowbigdeal.hostilemobscore.ServerConfig;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -83,11 +84,15 @@ public class AttackOrchestrator {
                       && mobToParty.containsKey(other.getUUID()));
 
         MobParty party = null;
+        int maxSize = ServerConfig.MAX_PARTY_SIZE.get();
         for (Mob nearby : nearbyInParty) {
             UUID nearbyPartyId = mobToParty.get(nearby.getUUID());
             if (nearbyPartyId != null) {
-                party = parties.get(nearbyPartyId);
-                if (party != null) break;
+                MobParty candidate = parties.get(nearbyPartyId);
+                if (candidate != null && candidate.getMembers().size() < maxSize) {
+                    party = candidate;
+                    break;
+                }
             }
         }
 

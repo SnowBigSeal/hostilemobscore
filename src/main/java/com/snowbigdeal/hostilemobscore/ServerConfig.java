@@ -30,6 +30,8 @@ public class ServerConfig {
      */
     public static ModConfigSpec.ConfigValue<List<? extends String>> VANILLA_HOSTILE_MOB_BLACKLIST;
 
+    public static ModConfigSpec.IntValue MAX_PARTY_SIZE;
+
     static {
         BUILDER.comment("Hostile Mobs Core — Server Config");
 
@@ -45,6 +47,18 @@ public class ServerConfig {
                     "Example: [\"minecraft:creeper\", \"minecraft:skeleton\"]"
                 )
                 .defineListAllowEmpty("vanillaHostileMobBlacklist", List.of(), ServerConfig::isValidResourceLocation);
+
+        BUILDER.pop();
+
+        BUILDER.comment("Attack orchestrator controls").push("orchestrator");
+
+        MAX_PARTY_SIZE = BUILDER
+                .comment(
+                    "Maximum number of mobs that can belong to a single party.",
+                    "New mobs that spawn when all nearby parties are full will form their own party.",
+                    "Range: 1-16"
+                )
+                .defineInRange("maxPartySize", 6, 1, 16);
 
         BUILDER.pop();
 
