@@ -4,7 +4,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
@@ -22,8 +21,10 @@ import java.util.UUID;
  * leave or join mid-combat; the party roster is fixed at world-join.
  *
  * <p>When any party member aggroes a target, {@link #onMobTargetChanged}
- * propagates that target to every other living party member so the whole
- * group engages together.
+ * stores the new target as the party's shared target. Other members pick it
+ * up on the next tick via
+ * {@link com.snowbigdeal.hostilemobscore.entity.behaviour.OrchestratorSyncBehaviour},
+ * which respects all brain guards (including deaggro cooldown).
  *
  * <p>The attack queue is round-robin: once per {@link #QUEUE_PULL_INTERVAL}
  * ticks the orchestrator dequeues the front member, fires its action if
@@ -38,10 +39,6 @@ public class AttackOrchestrator {
     private static final int    QUEUE_PULL_INTERVAL = 40;
 
     private static final Map<ResourceKey<Level>, AttackOrchestrator> INSTANCES = new HashMap<>();
-
-    /** Prevents recursive target propagation (A→B→A). */
-    private static final ThreadLocal<Boolean> PROPAGATING_TARGET =
-            ThreadLocal.withInitial(() -> false);
 
     private final Map<UUID, MobParty> parties    = new LinkedHashMap<>();
     private final Map<UUID, UUID>     mobToParty = new HashMap<>();
@@ -104,7 +101,8 @@ public class AttackOrchestrator {
 
     /**
      * Called when a party member acquires a target.
-     * Sets the party's shared target and propagates it to all other living members.
+     * Updates the party's shared target so other members can pick it up via
+     * {@link com.snowbigdeal.hostilemobscore.entity.behaviour.OrchestratorSyncBehaviour}.
      * Target-loss (null) is ignored — parties are static and persist between fights.
      */
     public void onMobTargetChanged(Mob mob, LivingEntity newTarget) {
@@ -116,20 +114,6 @@ public class AttackOrchestrator {
         if (party == null) return;
 
         party.setSharedTarget(newTarget);
-
-        if (!PROPAGATING_TARGET.get()) {
-            PROPAGATING_TARGET.set(true);
-            try {
-                for (Mob member : party.getMembers().values()) {
-                    if (member == mob || !member.isAlive()) continue;
-                    if (member.getTarget() == newTarget) continue;
-                    member.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, newTarget);
-                    member.setTarget(newTarget);
-                }
-            } finally {
-                PROPAGATING_TARGET.set(false);
-            }
-        }
     }
 
     public void onMobDied(Mob mob) {
@@ -213,10 +197,15 @@ public class AttackOrchestrator {
             return;
         }
 
-        // Clear stale shared target
+        // Clear stale shared target: dead/removed, or no longer engaged by any member
         LivingEntity sharedTarget = party.getSharedTarget();
-        if (sharedTarget != null && (!sharedTarget.isAlive() || sharedTarget.isRemoved())) {
-            party.setSharedTarget(null);
+        if (sharedTarget != null) {
+            boolean stale = !sharedTarget.isAlive() || sharedTarget.isRemoved();
+            if (!stale) {
+                stale = party.getMembers().values().stream()
+                        .noneMatch(m -> m.isAlive() && m.getTarget() == sharedTarget);
+            }
+            if (stale) party.setSharedTarget(null);
         }
 
         // Poll active assignments for completion

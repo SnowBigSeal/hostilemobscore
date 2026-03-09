@@ -3,6 +3,7 @@ package com.snowbigdeal.hostilemobscore.entity.slimes;
 import com.snowbigdeal.hostilemobscore.entity.HostileMob;
 import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import com.snowbigdeal.hostilemobscore.entity.behaviour.DeaggroBehaviour;
+import com.snowbigdeal.hostilemobscore.entity.behaviour.OrchestratorSyncBehaviour;
 import com.snowbigdeal.hostilemobscore.entity.behaviour.ReturnHomeBehaviour;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
@@ -228,6 +229,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     public BrainActivityGroup<T> getIdleTasks() {
         return BrainActivityGroup.idleTasks(
                 new FirstApplicableBehaviour<T>(
+                        new OrchestratorSyncBehaviour<>(),
                         new TetheredTargetBehaviour<>(),
                         new SetPlayerLookTarget<>(),
                         new SetRandomLookTarget<>()),

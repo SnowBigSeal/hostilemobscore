@@ -25,7 +25,6 @@ public class SlamMobAction implements IMobAction {
     @Override
     public void beginAction(Mob mob, LivingEntity target) {
         if (mob instanceof AngrySlime slime) {
-            if (target != null) slime.setTarget(target);
             slime.grantOrchestratedSlam();
         }
     }

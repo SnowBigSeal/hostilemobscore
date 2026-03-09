@@ -3,7 +3,6 @@ package com.snowbigdeal.hostilemobscore.entity.slimes.client.sleepyslime;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 
 /**
  * Registers the cone attack as an orchestrator-managed action for {@link SleepySlime}.
@@ -26,10 +25,6 @@ public class ConeMobAction implements IMobAction {
     @Override
     public void beginAction(Mob mob, LivingEntity target) {
         if (mob instanceof SleepySlime slime) {
-            if (target != null) {
-                slime.setTarget(target);
-                slime.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
-            }
             slime.grantOrchestratedCone();
         }
     }

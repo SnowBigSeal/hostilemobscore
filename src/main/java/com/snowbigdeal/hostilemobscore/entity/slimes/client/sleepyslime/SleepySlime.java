@@ -1,6 +1,7 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes.client.sleepyslime;
 
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
+import com.snowbigdeal.hostilemobscore.entity.behaviour.OrchestratorSyncBehaviour;
 import com.snowbigdeal.hostilemobscore.entity.slimes.BaseSlime;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
 import net.minecraft.sounds.SoundEvents;
@@ -122,6 +123,7 @@ public class SleepySlime extends BaseSlime<SleepySlime> {
     public BrainActivityGroup<SleepySlime> getIdleTasks() {
         return BrainActivityGroup.idleTasks(
                 new FirstApplicableBehaviour<SleepySlime>(
+                        new OrchestratorSyncBehaviour<>(),
                         new SetRandomLookTarget<>()),
                 new Idle<>().runFor(entity -> entity.getRandom().nextInt(40, 80)));
     }
