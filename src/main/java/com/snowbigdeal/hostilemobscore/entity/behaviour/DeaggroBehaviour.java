@@ -5,6 +5,7 @@ import com.snowbigdeal.hostilemobscore.entity.HostileMob;
 import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.tslat.smartbrainlib.api.core.behaviour.ExtendedBehaviour;
 import net.tslat.smartbrainlib.util.BrainUtils;
@@ -71,6 +72,11 @@ public class DeaggroBehaviour<T extends HostileMob<T>> extends ExtendedBehaviour
     protected void tick(T entity) {
         if (entity.getTarget() == null) {
             BrainUtils.clearMemory(entity, ModMemoryTypes.HIT_TIMER.get());
+            return;
+        }
+
+        if (entity.getTarget() instanceof Player p && p.getAbilities().invulnerable) {
+            disengage(entity);
             return;
         }
 
