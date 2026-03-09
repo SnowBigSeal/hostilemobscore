@@ -1,6 +1,7 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes.client.sleepyslime;
 
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import com.snowbigdeal.hostilemobscore.entity.behaviour.OrchestratorSyncBehaviour;
 import com.snowbigdeal.hostilemobscore.entity.slimes.BaseSlime;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
@@ -19,6 +20,7 @@ import net.tslat.smartbrainlib.api.core.behaviour.custom.attack.AnimatableMeleeA
 import net.tslat.smartbrainlib.api.core.behaviour.custom.misc.Idle;
 import net.tslat.smartbrainlib.api.core.behaviour.custom.target.InvalidateAttackTarget;
 import net.tslat.smartbrainlib.api.core.behaviour.custom.target.SetRandomLookTarget;
+import net.tslat.smartbrainlib.util.BrainUtils;
 
 public class SleepySlime extends BaseSlime<SleepySlime> {
 
@@ -36,24 +38,6 @@ public class SleepySlime extends BaseSlime<SleepySlime> {
     private static final double BASE_FALL_DAMAGE_MULTIPLIER = 0.1;
     private static final int    XP_REWARD                 = 3;
     private static final int    TETHER_RADIUS             = 48;
-
-    public int coneCooldown = 0;
-
-    private boolean orchestratorConePending  = false;
-    private boolean orchestratorConeFinished = false;
-
-    public void grantOrchestratedCone() {
-        this.orchestratorConePending  = true;
-        this.orchestratorConeFinished = false;
-    }
-
-    public void notifyOrchestratedConeComplete() {
-        this.orchestratorConePending  = false;
-        this.orchestratorConeFinished = true;
-    }
-
-    public boolean isConeAttackPending()     { return orchestratorConePending; }
-    public boolean isOrchestratedConeFinished() { return orchestratorConeFinished; }
 
     public SleepySlime(EntityType<? extends SleepySlime> entityType, Level level) {
         super(entityType, level);
@@ -82,16 +66,6 @@ public class SleepySlime extends BaseSlime<SleepySlime> {
 
     @Override
     public List<IMobAction> getMobActions() { return List.of(new ConeMobAction()); }
-
-    // -------------------------------------------------------------------------
-    // Cooldown tick-down
-    // -------------------------------------------------------------------------
-
-    @Override
-    protected void customServerAiStep() {
-        super.customServerAiStep();
-        if (coneCooldown > 0 && this.getTarget() != null) coneCooldown--;
-    }
 
     // -------------------------------------------------------------------------
     // Sounds
@@ -133,7 +107,7 @@ public class SleepySlime extends BaseSlime<SleepySlime> {
         return BrainActivityGroup.fightTasks(
                 new InvalidateAttackTarget<SleepySlime>().invalidateIf(
                         (slime, target) -> {
-                            if (slime.isConeAttackPending()) return false;
+                            if (BrainUtils.hasMemory(slime, ModMemoryTypes.CONE_PENDING.get())) return false;
                             if (target instanceof Player player && player.getAbilities().invulnerable) return true;
                             double followRange = slime.getAttributeValue(Attributes.FOLLOW_RANGE);
                             if (slime.distanceToSqr(target) > followRange * followRange) return true;

@@ -233,7 +233,31 @@ Key classes in `build/decompiled-cache/smartbrainlib/`:
 
 ---
 
-## Common Pitfalls
+## Behaviour-level Cooldowns: `cooldownFor()` vs. Brain Memories
+
+`ExtendedBehaviour` has a built-in cooldown mechanism:
+
+```java
+new MyBehaviour<>().cooldownFor(entity -> 100)           // fixed cooldown
+new MyBehaviour<>().cooldownForBetween(80, 120)          // random range
+```
+
+This stores `cooldownFinishedAt = gameTime + ticks` on the **behaviour instance** and prevents
+`tryStart()` from firing again until the duration expires.
+
+**Use `cooldownFor()` when:**
+- The behaviour is self-contained (e.g. wandering, look targets, one-shot ambient effects)
+- No external system needs to know the cooldown state
+
+**Use a forgettable brain memory (`setForgettableMemory`) instead when:**
+- The orchestrator (or any other class outside the behaviour) needs to check "is this on cooldown?"
+- Example: `SlamMobAction.isReady()` checks `!BrainUtils.hasMemory(mob, SLAM_COOLDOWN)` before
+  dispatching the slam action. The cooldown must be visible externally, so `cooldownFor()` won't work.
+
+For orchestrated attacks, the pattern is:
+1. Add `ATTACK_COOLDOWN VALUE_ABSENT` to `getMemoryRequirements()` — brain auto-gates start
+2. In `onStart()`: `BrainUtils.setForgettableMemory(entity, SLAM_COOLDOWN, true, COOLDOWN_TICKS)`
+3. External `isReady()`: `!BrainUtils.hasMemory(mob, SLAM_COOLDOWN)`
 
 - **Don't put logic in `customServerAiStep()`** — only `tickBrain(typedSelf())` belongs there.
 - **Don't store entity state in behaviour instance fields** — use memories. (Exception: per-run

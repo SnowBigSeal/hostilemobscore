@@ -6,6 +6,7 @@ import com.snowbigdeal.hostilemobscore.HostileMobsCore;
 import com.snowbigdeal.hostilemobscore.attack.AttackSnapshot;
 import com.snowbigdeal.hostilemobscore.attack.shape.ConeShape;
 import com.snowbigdeal.hostilemobscore.attack.shape.TelegraphAttackShape;
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import com.snowbigdeal.hostilemobscore.entity.behaviour.TelegraphAttackBehaviour;
 import com.snowbigdeal.hostilemobscore.entity.slimes.HoppingMoveControl;
 import net.minecraft.resources.ResourceLocation;
@@ -18,6 +19,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.tslat.smartbrainlib.util.BrainUtils;
 
 import java.util.List;
 
@@ -63,12 +65,15 @@ public class SleepyConeAttackBehaviour extends TelegraphAttackBehaviour<SleepySl
 
     @Override
     protected List<Pair<MemoryModuleType<?>, MemoryStatus>> getMemoryRequirements() {
-        return List.of(Pair.of(MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_PRESENT));
+        return List.of(
+                Pair.of(MemoryModuleType.ATTACK_TARGET,    MemoryStatus.VALUE_PRESENT),
+                Pair.of(ModMemoryTypes.CONE_COOLDOWN.get(), MemoryStatus.VALUE_ABSENT),
+                Pair.of(ModMemoryTypes.CONE_PENDING.get(),  MemoryStatus.VALUE_PRESENT)
+        );
     }
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, SleepySlime slime) {
-        if (!slime.isConeAttackPending()) return false;
         if (!(slime.getTarget() instanceof Player player)) return false;
         if (!slime.onGround() || slime.isInWater()) return false;
         if (slime.distanceTo(player) > CONE_LENGTH) return false;
@@ -95,7 +100,7 @@ public class SleepyConeAttackBehaviour extends TelegraphAttackBehaviour<SleepySl
 
     @Override
     protected void onStart(SleepySlime slime) {
-        slime.coneCooldown = COOLDOWN_TICKS;
+        BrainUtils.setForgettableMemory(slime, ModMemoryTypes.CONE_COOLDOWN.get(), true, COOLDOWN_TICKS);
         if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(true);
         var attr = slime.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
         if (attr != null) attr.addOrUpdateTransientModifier(KB_RESIST_MODIFIER);
@@ -123,6 +128,6 @@ public class SleepyConeAttackBehaviour extends TelegraphAttackBehaviour<SleepySl
         if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(false);
         var attr = slime.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
         if (attr != null) attr.removeModifier(KB_RESIST_ID);
-        slime.notifyOrchestratedConeComplete();
+        BrainUtils.clearMemory(slime, ModMemoryTypes.CONE_PENDING.get());
     }
 }

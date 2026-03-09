@@ -39,6 +39,37 @@ public final class ModMemoryTypes {
     public static final DeferredHolder<MemoryModuleType<?>, MemoryModuleType<Boolean>> DEAGGRO_COOLDOWN =
             MEMORY_TYPES.register("deaggro_cooldown", () -> new MemoryModuleType<>(Optional.empty()));
 
+    /**
+     * Forgettable flag set in {@link com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlimeSlamAttackBehaviour}
+     * when the slam attack starts. Expires automatically after the slam cooldown duration.
+     * Read by {@link com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlamMobAction#isReady} and
+     * required-absent by {@link com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlimeSlamAttackBehaviour}.
+     */
+    public static final DeferredHolder<MemoryModuleType<?>, MemoryModuleType<Boolean>> SLAM_COOLDOWN =
+            MEMORY_TYPES.register("slam_cooldown", () -> new MemoryModuleType<>(Optional.empty()));
+
+    /**
+     * Set by {@link com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlamMobAction#beginAction}
+     * to grant the slam attack. Cleared by
+     * {@link com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlimeSlamAttackBehaviour#onStop}.
+     * Required-present by the behaviour; absence signals the orchestrator that the action is complete.
+     */
+    public static final DeferredHolder<MemoryModuleType<?>, MemoryModuleType<Boolean>> SLAM_PENDING =
+            MEMORY_TYPES.register("slam_pending", () -> new MemoryModuleType<>(Optional.empty()));
+
+    /**
+     * Forgettable flag for {@link com.snowbigdeal.hostilemobscore.entity.slimes.client.sleepyslime.SleepyConeAttackBehaviour}.
+     * Mirrors {@link #SLAM_COOLDOWN} for the cone attack.
+     */
+    public static final DeferredHolder<MemoryModuleType<?>, MemoryModuleType<Boolean>> CONE_COOLDOWN =
+            MEMORY_TYPES.register("cone_cooldown", () -> new MemoryModuleType<>(Optional.empty()));
+
+    /**
+     * Mirrors {@link #SLAM_PENDING} for the cone attack.
+     */
+    public static final DeferredHolder<MemoryModuleType<?>, MemoryModuleType<Boolean>> CONE_PENDING =
+            MEMORY_TYPES.register("cone_pending", () -> new MemoryModuleType<>(Optional.empty()));
+
     /** Activity that preempts FIGHT and IDLE while the mob walks home. */
     public static final DeferredHolder<Activity, Activity> ACTIVITY_RETURNING_HOME =
             ACTIVITIES.register("returning_home", () -> new Activity("returning_home"));

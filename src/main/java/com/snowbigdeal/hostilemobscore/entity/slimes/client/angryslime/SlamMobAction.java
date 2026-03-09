@@ -1,13 +1,15 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
 
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.tslat.smartbrainlib.util.BrainUtils;
 
 /**
  * Registers the slam attack as an orchestrator-managed action for {@link AngrySlime}.
  * The orchestrator calls {@link #beginAction} when the slime's turn comes up in the party
- * queue and its internal cooldown ({@link AngrySlime#slamCooldown}) has reached zero.
+ * queue and its {@link ModMemoryTypes#SLAM_COOLDOWN} memory has expired.
  */
 public class SlamMobAction implements IMobAction {
 
@@ -18,26 +20,21 @@ public class SlamMobAction implements IMobAction {
 
     @Override
     public boolean isReady(Mob mob) {
-        if (!(mob instanceof AngrySlime slime)) return false;
-        return slime.slamCooldown == 0 && slime.onGround();
+        return !BrainUtils.hasMemory(mob, ModMemoryTypes.SLAM_COOLDOWN.get()) && mob.onGround();
     }
 
     @Override
     public void beginAction(Mob mob, LivingEntity target) {
-        if (mob instanceof AngrySlime slime) {
-            slime.grantOrchestratedSlam();
-        }
+        BrainUtils.setMemory(mob, ModMemoryTypes.SLAM_PENDING.get(), true);
     }
 
     @Override
     public boolean isComplete(Mob mob) {
-        if (!(mob instanceof AngrySlime slime)) return false;
-        return slime.isOrchestratedSlamFinished();
+        return !BrainUtils.hasMemory(mob, ModMemoryTypes.SLAM_PENDING.get());
     }
 
     @Override
     public int getCooldownTicks(Mob mob) {
-        if (!(mob instanceof AngrySlime slime)) return 0;
-        return slime.slamCooldown;
+        return BrainUtils.hasMemory(mob, ModMemoryTypes.SLAM_COOLDOWN.get()) ? 1 : 0;
     }
 }
