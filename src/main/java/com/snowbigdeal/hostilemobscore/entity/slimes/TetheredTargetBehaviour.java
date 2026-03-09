@@ -1,5 +1,7 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes;
 
+import com.snowbigdeal.hostilemobscore.entity.HostileMob;
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -9,14 +11,14 @@ import net.tslat.smartbrainlib.util.BrainUtils;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Custom targeting for slime mobs. Extends TargetOrRetaliate and gates all
- * target acquisition (initial + retaliation) through a single predicate so
+ * Targeting behaviour for tethered hostile mobs. Extends TargetOrRetaliate and gates
+ * all target acquisition (initial + retaliation) through a single predicate so
  * nothing can sneak past: creative/spectator players and targets outside the
  * tether radius are never set or kept.
  */
-public class SlimeTargetBehaviour<T extends BaseSlime<T>> extends TargetOrRetaliate<T> {
+public class TetheredTargetBehaviour<T extends BaseSlime<T>> extends TargetOrRetaliate<T> {
 
-    public SlimeTargetBehaviour() {
+    public TetheredTargetBehaviour() {
         attackablePredicate(target ->
             target instanceof Player player
             && target.isAlive()
@@ -36,17 +38,20 @@ public class SlimeTargetBehaviour<T extends BaseSlime<T>> extends TargetOrRetali
     protected boolean checkExtraStartConditions(ServerLevel level, T owner) {
         if (!owner.isWithinRestriction()) return false;
         if (owner.isReturningHome()) return false;
+        if (BrainUtils.hasMemory(owner, ModMemoryTypes.DEAGGRO_COOLDOWN.get())) return false;
         return super.checkExtraStartConditions(level, owner);
     }
 
     @Override
     protected void start(T entity) {
         super.start(entity);
-        // Ensure brain memory stays in sync with what we allow
         LivingEntity target = BrainUtils.getTargetOfEntity(entity);
         if (target instanceof Player player && player.getAbilities().invulnerable) {
             BrainUtils.clearMemory(entity, MemoryModuleType.ATTACK_TARGET);
             entity.setTarget(null);
+        } else if (target != null && !BrainUtils.hasMemory(entity, ModMemoryTypes.HIT_TIMER.get())) {
+            // Seed the deaggro timer for mobs that aggro by proximity (never personally hit).
+            BrainUtils.setMemory(entity, ModMemoryTypes.HIT_TIMER.get(), HostileMob.HIT_TIMER_MAX);
         }
     }
 }

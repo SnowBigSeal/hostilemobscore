@@ -6,8 +6,9 @@ import com.snowbigdeal.hostilemobscore.attack.AttackSnapshot;
 import com.snowbigdeal.hostilemobscore.sounds.ModSounds;
 import com.snowbigdeal.hostilemobscore.attack.shape.CircleShape;
 import com.snowbigdeal.hostilemobscore.attack.shape.TelegraphAttackShape;
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import com.snowbigdeal.hostilemobscore.entity.behaviour.TelegraphAttackBehaviour;
-import com.snowbigdeal.hostilemobscore.entity.slimes.SlimeMoveControl;
+import com.snowbigdeal.hostilemobscore.entity.slimes.HoppingMoveControl;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
@@ -17,6 +18,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.tslat.smartbrainlib.util.BrainUtils;
 
 import java.util.List;
 
@@ -75,13 +77,10 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, AngrySlime slime) {
         if (!(slime.getTarget() instanceof Player player)) return false;
-        if (!slime.onGround() || slime.slamCooldown > 0) return false;
-        if (slime.isInWater()) return false;
+        if (!slime.onGround() || slime.isInWater()) return false;
         if (!slime.hasLineOfSight(player)) return false;
         if (!level.noCollision(slime, slime.getBoundingBox().expandTowards(0, JUMP_CLEARANCE, 0))) return false;
-        if (slime.getNavigation().createPath(player, 1) == null) return false;
-
-        return slime.isOrchestratorSlamPending();
+        return slime.getNavigation().createPath(player, 1) != null;
     }
 
     // -------------------------------------------------------------------------
@@ -106,9 +105,10 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
         this.flightTicks = 0;
         this.wasAirborne = false;
 
-        slime.slamCooldown = COOLDOWN_TICKS + slime.getRandom().nextInt(COOLDOWN_VARIANCE);
+        BrainUtils.setMemory(slime, ModMemoryTypes.SLAM_COOLDOWN.get(),
+                COOLDOWN_TICKS + slime.getRandom().nextInt(COOLDOWN_VARIANCE));
 
-        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setSlamLock(true);
+        if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(true);
     }
 
     @Override
@@ -144,8 +144,8 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
 
     @Override
     protected void onStop(AngrySlime slime) {
-        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setSlamLock(false);
-        slime.notifyOrchestratedSlamComplete();
+        if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(false);
+        BrainUtils.clearMemory(slime, ModMemoryTypes.SLAM_PENDING.get());
         slamTarget   = null;
         slamPosition = null;
         flightTicks  = 0;
@@ -232,6 +232,9 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
 
     @Override
     protected List<Pair<MemoryModuleType<?>, MemoryStatus>> getMemoryRequirements() {
-        return List.of();
+        return List.of(
+                Pair.of(ModMemoryTypes.SLAM_COOLDOWN.get(), MemoryStatus.VALUE_ABSENT),
+                Pair.of(ModMemoryTypes.SLAM_PENDING.get(),  MemoryStatus.VALUE_PRESENT)
+        );
     }
 }

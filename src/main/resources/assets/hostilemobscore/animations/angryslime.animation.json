@@ -727,14 +727,14 @@
 				"inner_cube": {
 					"position": {
 						"0.0": {
-							"vector": [0, -8, 0]
+							"vector": [0, 0, 0]
 						},
 						"0.5": {
-							"vector": [0, 0, 0],
+							"vector": [0, 8, 0],
 							"easing": "easeOutCirc"
 						},
 						"1.0": {
-							"vector": [0, -8, 0],
+							"vector": [0, 0, 0],
 							"easing": "easeInOutQuad"
 						}
 					},
@@ -754,14 +754,14 @@
 				"outer_cube": {
 					"position": {
 						"0.0": {
-							"vector": [0, -8, 0]
+							"vector": [0, 0, 0]
 						},
 						"0.5": {
-							"vector": [0, 0, 0],
+							"vector": [0, 8, 0],
 							"easing": "easeOutCirc"
 						},
 						"1.0": {
-							"vector": [0, -8, 0],
+							"vector": [0, 0, 0],
 							"easing": "easeInOutQuad"
 						}
 					},

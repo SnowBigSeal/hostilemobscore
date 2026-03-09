@@ -24,6 +24,9 @@ public class ModItems {
     public static final DeferredHolder<Item, DeferredSpawnEggItem> ANGRY_SLIME_SPAWN_EGG = ITEMS.register("angry_slime_spawn_egg",
             () -> new DeferredSpawnEggItem(ModEntities.ANGRY_SLIME, 0xB02E26, 0x7A1C1C, new Item.Properties()));
 
+    public static final DeferredHolder<Item, DeferredSpawnEggItem> SLEEPY_SLIME_SPAWN_EGG = ITEMS.register("sleepy_slime_spawn_egg",
+            () -> new DeferredSpawnEggItem(ModEntities.SLEEPY_SLIME, 0x87CEEB, 0x6A5ACD, new Item.Properties()));
+
     public static final Map<DyeColor, DeferredHolder<Item, ColoredSlimeballItem>> SLIMEBALLS = new EnumMap<>(DyeColor.class);
 
     static {

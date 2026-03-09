@@ -1,5 +1,6 @@
 package com.snowbigdeal.hostilemobscore.entity;
 
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
 import com.snowbigdeal.hostilemobscore.orchestrator.IOrchestrated;
 import com.snowbigdeal.hostilemobscore.orchestrator.OrchestratorAction;
@@ -9,6 +10,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
@@ -22,6 +24,7 @@ import net.tslat.smartbrainlib.api.core.SmartBrainProvider;
 import net.tslat.smartbrainlib.api.core.sensor.ExtendedSensor;
 import net.tslat.smartbrainlib.api.core.sensor.vanilla.HurtBySensor;
 import net.tslat.smartbrainlib.api.core.sensor.vanilla.NearbyLivingEntitySensor;
+import net.tslat.smartbrainlib.util.BrainUtils;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -39,10 +42,10 @@ import java.util.UUID;
  *   <li>SmartBrainLib brain provider</li>
  *   <li>IOrchestrated (party / pending-action) state</li>
  *   <li>Synced tether centre and party ID for client-side debug rendering</li>
- *   <li>Return-home flag used by ReturnHomeBehaviour</li>
+ *   <li>Return-home state backed by {@link ModMemoryTypes#RETURNING_HOME} brain memory</li>
  *   <li>Default sensors (NearbyLiving + HurtBy)</li>
  *   <li>finalizeSpawn: sets tether anchor on first spawn</li>
- *   <li>customServerAiStep: drops creative-player targets then ticks brain</li>
+ *   <li>customServerAiStep: ticks brain</li>
  * </ul>
  *
  * @param <T> The concrete subclass (F-bounded for SmartBrainOwner).
@@ -114,13 +117,28 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
     @Override public void             setPendingAction(OrchestratorAction a) { this.pendingAction = a; }
 
     // -------------------------------------------------------------------------
-    // Return-home flag (used by ReturnHomeBehaviour)
+    // Return-home constants
     // -------------------------------------------------------------------------
 
-    private boolean returningHome = false;
+    /** Ticks without a player hit before the mob disengages (30 seconds). */
+    public static final int HIT_TIMER_MAX = 600;
 
-    public boolean isReturningHome()          { return returningHome; }
-    public void    setReturningHome(boolean v) { this.returningHome = v; }
+    // -------------------------------------------------------------------------
+    // Return-home state — backed by the RETURNING_HOME brain memory so the
+    // SmartBrainLib activity system can gate and run ReturnHomeBehaviour.
+    // -------------------------------------------------------------------------
+
+    public boolean isReturningHome() {
+        return BrainUtils.hasMemory(this, ModMemoryTypes.RETURNING_HOME.get());
+    }
+
+    public void setReturningHome(boolean v) {
+        if (v) {
+            BrainUtils.setMemory(this, ModMemoryTypes.RETURNING_HOME.get(), true);
+        } else {
+            BrainUtils.clearMemory(this, ModMemoryTypes.RETURNING_HOME.get());
+        }
+    }
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -192,12 +210,24 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
     protected abstract int getTetherRadius();
 
     @Override
-    protected void customServerAiStep() {
-        if (this.getTarget() instanceof Player p && p.getAbilities().invulnerable) {
-            this.setTarget(null);
+    public boolean hurt(DamageSource source, float amount) {
+        boolean damaged = super.hurt(source, amount);
+        if (damaged && source.getEntity() instanceof Player p && !p.getAbilities().invulnerable) {
+            BrainUtils.setMemory(this, ModMemoryTypes.HIT_TIMER.get(), HIT_TIMER_MAX);
         }
+        return damaged;
+    }
+
+    @Override
+    protected void customServerAiStep() {
         tickBrain(typedSelf());
     }
+
+    /**
+     * Called each tick while this mob is returning to its tether anchor.
+     * Drive your movement controller toward {@link #getRestrictCenter()} here.
+     */
+    public abstract void applyReturnMovement();
 
     /** Type-safe self-reference for SmartBrainOwner. */
     @SuppressWarnings("unchecked")

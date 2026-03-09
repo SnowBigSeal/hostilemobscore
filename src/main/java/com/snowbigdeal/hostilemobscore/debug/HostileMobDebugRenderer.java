@@ -2,7 +2,7 @@ package com.snowbigdeal.hostilemobscore.debug;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.AngrySlime;
+import com.snowbigdeal.hostilemobscore.entity.HostileMob;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -21,7 +21,7 @@ import java.util.*;
  * </ul>
  * Toggle via {@code /hmcdebug tether}, {@code /hmcdebug party}, or {@code /hmcdebug off}.
  */
-public class SlimeDebugRenderer {
+public class HostileMobDebugRenderer {
 
     public static final Set<String> ACTIVE_MODES = new HashSet<>();
 
@@ -40,43 +40,45 @@ public class SlimeDebugRenderer {
         double camX = camPos.x, camY = camPos.y, camZ = camPos.z;
 
         AABB searchBox = mc.player.getBoundingBox().inflate(128);
-        List<AngrySlime> slimes = mc.level.getEntitiesOfClass(AngrySlime.class, searchBox);
+        @SuppressWarnings("unchecked")
+        List<HostileMob<?>> mobs = mc.level.getEntitiesOfClass(
+                (Class<HostileMob<?>>) (Class<?>) HostileMob.class, searchBox);
 
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         VertexConsumer lines = buffers.getBuffer(RenderType.lines());
         PoseStack poseStack = event.getPoseStack();
 
         if (ACTIVE_MODES.contains("tether")) {
-            for (AngrySlime slime : slimes) {
-                BlockPos anchor = slime.getSyncedTetherCenter();
+            for (HostileMob<?> mob : mobs) {
+                BlockPos anchor = mob.getSyncedTetherCenter();
                 double ax = anchor.getX() + 0.5 - camX;
                 double ay = anchor.getY() - camY;
                 double az = anchor.getZ() + 0.5 - camZ;
-                double sy = slime.getY() - camY;
+                double sy = mob.getY() - camY;
 
                 // Circle at entity's Y centred on tether anchor
                 drawCircle(poseStack, lines, ax, sy, az, 32.0, 1.0f, 0.45f, 0.0f, 1.0f, 48);
                 // Line from anchor to entity
                 drawLine(poseStack, lines,
                         ax, ay, az,
-                        slime.getX() - camX, slime.getY() - camY, slime.getZ() - camZ,
+                        mob.getX() - camX, mob.getY() - camY, mob.getZ() - camZ,
                         1.0f, 0.45f, 0.0f, 0.5f);
             }
         }
 
         if (ACTIVE_MODES.contains("party")) {
-            Map<UUID, List<AngrySlime>> parties = new HashMap<>();
-            for (AngrySlime slime : slimes) {
-                slime.getSyncedPartyId().ifPresent(id ->
-                        parties.computeIfAbsent(id, k -> new ArrayList<>()).add(slime));
+            Map<UUID, List<HostileMob<?>>> parties = new HashMap<>();
+            for (HostileMob<?> mob : mobs) {
+                mob.getSyncedPartyId().ifPresent(id ->
+                        parties.computeIfAbsent(id, k -> new ArrayList<>()).add(mob));
             }
-            for (Map.Entry<UUID, List<AngrySlime>> entry : parties.entrySet()) {
+            for (Map.Entry<UUID, List<HostileMob<?>>> entry : parties.entrySet()) {
                 float[] col = partyColor(entry.getKey());
-                List<AngrySlime> members = entry.getValue();
+                List<HostileMob<?>> members = entry.getValue();
                 for (int i = 0; i < members.size(); i++) {
                     for (int j = i + 1; j < members.size(); j++) {
-                        AngrySlime a = members.get(i);
-                        AngrySlime b = members.get(j);
+                        HostileMob<?> a = members.get(i);
+                        HostileMob<?> b = members.get(j);
                         drawLine(poseStack, lines,
                                 a.getX() - camX, a.getY() + 1.0 - camY, a.getZ() - camZ,
                                 b.getX() - camX, b.getY() + 1.0 - camY, b.getZ() - camZ,

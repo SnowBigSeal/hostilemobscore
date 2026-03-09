@@ -20,6 +20,9 @@ public class ModItemModelProvider extends ItemModelProvider {
         withExistingParent(ModItems.ANGRY_SLIME_SPAWN_EGG.getId().getPath(),
                 ResourceLocation.fromNamespaceAndPath("minecraft", "item/template_spawn_egg"));
 
+        withExistingParent(ModItems.SLEEPY_SLIME_SPAWN_EGG.getId().getPath(),
+                ResourceLocation.fromNamespaceAndPath("minecraft", "item/template_spawn_egg"));
+
         ModelFile blockModel = new ModelFile.UncheckedModelFile(
                 ResourceLocation.fromNamespaceAndPath(HostileMobsCore.MODID, "block/colored_slime_block").toString());
 

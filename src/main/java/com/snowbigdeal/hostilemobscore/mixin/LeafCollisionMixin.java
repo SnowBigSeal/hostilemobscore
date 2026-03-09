@@ -1,6 +1,6 @@
 package com.snowbigdeal.hostilemobscore.mixin;
 
-import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.AngrySlime;
+import com.snowbigdeal.hostilemobscore.entity.slimes.BaseSlime;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.BlockGetter;
@@ -25,7 +25,7 @@ public abstract class LeafCollisionMixin {
     private void hostilemobscore$leafPhaseForSlime(BlockGetter level, BlockPos pos, CollisionContext context,
                                                     CallbackInfoReturnable<VoxelShape> cir) {
         if (!(context instanceof EntityCollisionContext ecc)) return;
-        if (!(ecc.getEntity() instanceof AngrySlime)) return;
+        if (!(ecc.getEntity() instanceof BaseSlime<?>)) return;
         BlockBehaviour.BlockStateBase self = (BlockBehaviour.BlockStateBase)(Object)this;
         if (self.is(BlockTags.LEAVES)) {
             cir.setReturnValue(Shapes.empty());

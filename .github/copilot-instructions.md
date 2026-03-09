@@ -57,11 +57,10 @@ The project has multiple run configurations defined in `build.gradle`:
 
 - **`entity/`** - Custom entity definitions
   - `ModEntities.java` - Entity registry
-  - `slimes/client/angryslime/` - Angry Slime entity (custom mob)
-    - `AngrySlime.java` - Entity logic
-    - `AngrySlimeModel.java` - GeckoLib animated model
-    - `AngrySlimeRenderer.java` - Entity renderer (uses GeckoLib)
-    - `SlimeAi.java` - SmartBrainLib AI behavior
+  - `HostileMob.java` - Abstract base for all mod entities (brain, tether, return-home)
+  - `ModMemoryTypes.java` - Custom memory modules and activities
+  - `slimes/` - Slime-type mobs (AngrySlime, SleepySlime)
+  - `behaviour/` - Shared SmartBrainLib behaviours (DeaggroBehaviour, ReturnHomeBehaviour, etc.)
 
 - **`items/`** - Item definitions
   - `ModItems.java` - Item registry (includes spawn eggs)
@@ -110,7 +109,9 @@ The project has multiple run configurations defined in `build.gradle`:
 ### AI Behavior
 
 - Use **SmartBrainLib** for goal-based AI (replaces vanilla goal selectors)
-- AI is defined in entity-specific AI classes (e.g., `SlimeAi.java`)
+- See `.github/instructions/smartbrainlib.instructions.md` for full patterns and API reference
+- Entity AI is defined in `entity/behaviour/` (shared behaviours) and per-entity classes
+- `customServerAiStep()` must contain only `tickBrain(typedSelf())` — all logic goes in behaviours
 
 ### Configuration
 

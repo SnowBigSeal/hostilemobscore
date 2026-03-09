@@ -9,15 +9,15 @@ import net.tslat.smartbrainlib.api.core.behaviour.ExtendedBehaviour;
 import java.util.List;
 
 /**
- * Drives slime hopping movement by updating {@link SlimeMoveControl} each tick.
- * All jump/speed logic lives in SlimeMoveControl so it executes after the
+ * Drives hopping movement by updating {@link HoppingMoveControl} each tick.
+ * All jump/speed logic lives in HoppingMoveControl so it executes after the
  * brain tick and can't be overwritten by the default pathfinding MoveControl.
  */
-public class SlimeMoveBehaviour<T extends BaseSlime<T>> extends ExtendedBehaviour<T> {
+public class HoppingCombatBehaviour<T extends BaseSlime<T>> extends ExtendedBehaviour<T> {
 
     /** Maximum horizontal impulse applied at full follow range. */
     private static final float  MAX_LEAP_FORCE    = 1.4f;
-    /** Distance (blocks) the slime aims to land at — centre of the strafe sweet spot. */
+    /** Distance (blocks) the entity aims to land at — centre of the strafe sweet spot. */
     private static final float  TARGET_DIST       = 4.0f;
     /** Distance (blocks) at which full leap force is used. Beyond this it's capped. */
     private static final float  MAX_DIST          = 14.0f;
@@ -38,7 +38,7 @@ public class SlimeMoveBehaviour<T extends BaseSlime<T>> extends ExtendedBehaviou
     private boolean isStrafing = false;
     private boolean isInDamageRange = false;
 
-    public SlimeMoveBehaviour() {
+    public HoppingCombatBehaviour() {
         noTimeout();
     }
 
@@ -57,8 +57,8 @@ public class SlimeMoveBehaviour<T extends BaseSlime<T>> extends ExtendedBehaviou
 
     @Override
     protected void tick(T slime) {
-        if (!(slime.getMoveControl() instanceof SlimeMoveControl smc)) return;
-        if (slime.isReturningHome()) return; // SlimeReturnHomeBehaviour owns movement
+        if (!(slime.getMoveControl() instanceof HoppingMoveControl smc)) return;
+        if (slime.isReturningHome()) return;
 
         if (slime.getTarget() != null) {
             tickCombat(slime, smc);
@@ -67,7 +67,7 @@ public class SlimeMoveBehaviour<T extends BaseSlime<T>> extends ExtendedBehaviou
         }
     }
 
-    private void tickCombat(T slime, SlimeMoveControl smc) {
+    private void tickCombat(T slime, HoppingMoveControl smc) {
         float yRot = angleToTarget(slime);
         double distSq = slime.distanceToSqr(slime.getTarget());
 
@@ -81,7 +81,7 @@ public class SlimeMoveBehaviour<T extends BaseSlime<T>> extends ExtendedBehaviou
         }
     }
 
-    private void tickWander(T slime, SlimeMoveControl smc) {
+    private void tickWander(T slime, HoppingMoveControl smc) {
         updateWanderDirection(slime);
         smc.setDirection(this.wanderYRot, false);
         smc.setWantedMovement(WANDER_SPEED);
@@ -113,12 +113,12 @@ public class SlimeMoveBehaviour<T extends BaseSlime<T>> extends ExtendedBehaviou
         }
     }
 
-    private void applyStrafeMovement(SlimeMoveControl smc, float yRot) {
+    private void applyStrafeMovement(HoppingMoveControl smc, float yRot) {
         smc.setStrafe(yRot);
         smc.setWantedMovement(STRAFE_SPEED);
     }
 
-    private void applyLeapMovement(SlimeMoveControl smc, float yRot, double distSq) {
+    private void applyLeapMovement(HoppingMoveControl smc, float yRot, double distSq) {
         smc.setLeapForce(calculateLeapForce(distSq));
         smc.setDirection(yRot, true);
         smc.setWantedMovement(LEAP_SPEED);
@@ -139,7 +139,7 @@ public class SlimeMoveBehaviour<T extends BaseSlime<T>> extends ExtendedBehaviou
 
     @Override
     protected void stop(T slime) {
-        if (slime.getMoveControl() instanceof SlimeMoveControl smc) {
+        if (slime.getMoveControl() instanceof HoppingMoveControl smc) {
             smc.setWantedMovement(0.0);
         }
     }

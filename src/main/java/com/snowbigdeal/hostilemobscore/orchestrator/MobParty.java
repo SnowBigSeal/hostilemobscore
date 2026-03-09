@@ -27,7 +27,7 @@ public class MobParty {
     private final Deque<UUID>                   attackQueue       = new ArrayDeque<>();
 
     private LivingEntity sharedTarget;
-    private int queuePullIn = 0; // ticks until the next queue pull; counts down each tick
+    private int queuePullIn = 0;  // ticks until the next queue pull; counts down each tick
 
     public MobParty(UUID partyId) {
         this.partyId = partyId;
