@@ -34,12 +34,17 @@ public class CooldownTickBehaviour<T extends HostileMob<T>> extends ExtendedBeha
         this.cooldownMemory = cooldownMemory;
     }
 
+    // getMemoryRequirements() is called from ExtendedBehaviour's constructor before
+    // this subclass's fields are assigned, so it must NOT reference cooldownMemory.
+    // We enforce the cooldown memory presence in checkExtraStartConditions() instead.
     @Override
     protected List<Pair<MemoryModuleType<?>, MemoryStatus>> getMemoryRequirements() {
-        return List.of(
-                Pair.of(MemoryModuleType.ATTACK_TARGET,  MemoryStatus.VALUE_PRESENT),
-                Pair.of(cooldownMemory.get(),             MemoryStatus.VALUE_PRESENT)
-        );
+        return List.of(Pair.of(MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_PRESENT));
+    }
+
+    @Override
+    protected boolean checkExtraStartConditions(ServerLevel level, T entity) {
+        return BrainUtils.hasMemory(entity, cooldownMemory.get());
     }
 
     @Override
