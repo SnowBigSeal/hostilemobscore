@@ -30,6 +30,15 @@ public final class ModMemoryTypes {
     public static final DeferredHolder<MemoryModuleType<?>, MemoryModuleType<Integer>> HIT_TIMER =
             MEMORY_TYPES.register("hit_timer", () -> new MemoryModuleType<>(Optional.empty()));
 
+    /**
+     * Short-lived flag set after a mob disengages or returns home.
+     * While present, {@link com.snowbigdeal.hostilemobscore.entity.slimes.TetheredTargetBehaviour}
+     * will not acquire a new target, preventing immediate re-aggro.
+     * Stored as a forgettable memory; expires automatically after the cooldown period.
+     */
+    public static final DeferredHolder<MemoryModuleType<?>, MemoryModuleType<Boolean>> DEAGGRO_COOLDOWN =
+            MEMORY_TYPES.register("deaggro_cooldown", () -> new MemoryModuleType<>(Optional.empty()));
+
     /** Activity that preempts FIGHT and IDLE while the mob walks home. */
     public static final DeferredHolder<Activity, Activity> ACTIVITY_RETURNING_HOME =
             ACTIVITIES.register("returning_home", () -> new Activity("returning_home"));

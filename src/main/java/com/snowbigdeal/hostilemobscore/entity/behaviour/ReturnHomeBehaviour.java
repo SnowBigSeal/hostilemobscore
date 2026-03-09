@@ -57,6 +57,8 @@ public class ReturnHomeBehaviour<T extends HostileMob<T>> extends ExtendedBehavi
 
     private void arriveHome(T entity) {
         BrainUtils.clearMemory(entity, ModMemoryTypes.RETURNING_HOME.get());
+        BrainUtils.clearMemory(entity, MemoryModuleType.HURT_BY_ENTITY);
+        BrainUtils.setForgettableMemory(entity, ModMemoryTypes.DEAGGRO_COOLDOWN.get(), true, 200);
         entity.setInvulnerable(false);
         entity.setHealth(entity.getMaxHealth());
     }

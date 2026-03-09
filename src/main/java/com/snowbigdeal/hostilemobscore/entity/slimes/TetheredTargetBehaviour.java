@@ -1,5 +1,6 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes;
 
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -36,6 +37,7 @@ public class TetheredTargetBehaviour<T extends BaseSlime<T>> extends TargetOrRet
     protected boolean checkExtraStartConditions(ServerLevel level, T owner) {
         if (!owner.isWithinRestriction()) return false;
         if (owner.isReturningHome()) return false;
+        if (BrainUtils.hasMemory(owner, ModMemoryTypes.DEAGGRO_COOLDOWN.get())) return false;
         return super.checkExtraStartConditions(level, owner);
     }
 

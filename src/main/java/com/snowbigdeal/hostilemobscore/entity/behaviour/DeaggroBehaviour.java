@@ -85,7 +85,9 @@ public class DeaggroBehaviour<T extends HostileMob<T>> extends ExtendedBehaviour
 
     private void disengage(T entity) {
         BrainUtils.clearMemory(entity, MemoryModuleType.ATTACK_TARGET);
+        BrainUtils.clearMemory(entity, MemoryModuleType.HURT_BY_ENTITY);
         BrainUtils.clearMemory(entity, ModMemoryTypes.HIT_TIMER.get());
+        BrainUtils.setForgettableMemory(entity, ModMemoryTypes.DEAGGRO_COOLDOWN.get(), true, 200);
         entity.setTarget(null);
 
         if (entity.distanceToSqr(Vec3.atCenterOf(entity.getRestrictCenter())) > disengageDistSq) {
