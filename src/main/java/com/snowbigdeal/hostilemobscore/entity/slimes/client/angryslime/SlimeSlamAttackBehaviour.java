@@ -7,7 +7,7 @@ import com.snowbigdeal.hostilemobscore.sounds.ModSounds;
 import com.snowbigdeal.hostilemobscore.attack.shape.CircleShape;
 import com.snowbigdeal.hostilemobscore.attack.shape.TelegraphAttackShape;
 import com.snowbigdeal.hostilemobscore.entity.behaviour.TelegraphAttackBehaviour;
-import com.snowbigdeal.hostilemobscore.entity.slimes.SlimeMoveControl;
+import com.snowbigdeal.hostilemobscore.entity.slimes.HoppingMoveControl;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
@@ -108,7 +108,7 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
 
         slime.slamCooldown = COOLDOWN_TICKS + slime.getRandom().nextInt(COOLDOWN_VARIANCE);
 
-        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setAttackLock(true);
+        if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(true);
     }
 
     @Override
@@ -144,7 +144,7 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
 
     @Override
     protected void onStop(AngrySlime slime) {
-        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setAttackLock(false);
+        if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(false);
         slime.notifyOrchestratedSlamComplete();
         slamTarget   = null;
         slamPosition = null;

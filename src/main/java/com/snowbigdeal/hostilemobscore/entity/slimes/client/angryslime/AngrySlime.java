@@ -3,7 +3,7 @@ package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
 import com.snowbigdeal.hostilemobscore.Constants;
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
 import com.snowbigdeal.hostilemobscore.entity.slimes.BaseSlime;
-import com.snowbigdeal.hostilemobscore.entity.slimes.SlimeMoveControl;
+import com.snowbigdeal.hostilemobscore.entity.slimes.HoppingMoveControl;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
 import com.snowbigdeal.hostilemobscore.sounds.ModSounds;
 import net.minecraft.sounds.SoundEvent;

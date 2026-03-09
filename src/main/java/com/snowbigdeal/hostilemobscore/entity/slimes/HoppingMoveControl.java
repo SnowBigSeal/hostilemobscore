@@ -6,14 +6,14 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * MoveControl that drives slime hopping movement.
+ * MoveControl that drives hopping movement for bouncing entities.
  * Logic lives here (not in the brain behaviour) so it runs last each tick
  * and isn't overwritten by the default pathfinding MoveControl.
  *
- * Brain behaviour ({@link SlimeMoveBehaviour}) simply calls setDirection() and
+ * Brain behaviour ({@link HoppingCombatBehaviour}) simply calls setDirection() and
  * setWantedMovement() each tick, mirroring how vanilla goals drive vanilla SlimeMoveControl.
  */
-public class SlimeMoveControl extends MoveControl {
+public class HoppingMoveControl extends MoveControl {
 
     private float yRot;
     private int jumpDelay;
@@ -25,7 +25,7 @@ public class SlimeMoveControl extends MoveControl {
     private float strafeSign  = 1;  // direction for the NEXT jump (-1 = left, 1 = right)
     private float flightSign  = 1;  // direction locked in for the CURRENT flight
 
-    // Leap force set each tick by SlimeMoveBehaviour based on distance
+    // Leap force set each tick by HoppingCombatBehaviour based on distance
     private float leapForce = 0.5f;
 
     private static final double STRAFE_LATERAL_BOOST  = 0.45;
@@ -36,7 +36,7 @@ public class SlimeMoveControl extends MoveControl {
     // When true, attack behaviour controls physics directly — hop logic is suppressed
     private boolean attackLock = false;
 
-    public SlimeMoveControl(BaseSlime<?> slime) {
+    public HoppingMoveControl(BaseSlime<?> slime) {
         super(slime);
         this.slime = slime;
         this.yRot = slime.getYRot();

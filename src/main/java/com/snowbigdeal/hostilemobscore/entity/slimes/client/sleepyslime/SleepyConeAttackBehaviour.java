@@ -7,7 +7,7 @@ import com.snowbigdeal.hostilemobscore.attack.AttackSnapshot;
 import com.snowbigdeal.hostilemobscore.attack.shape.ConeShape;
 import com.snowbigdeal.hostilemobscore.attack.shape.TelegraphAttackShape;
 import com.snowbigdeal.hostilemobscore.entity.behaviour.TelegraphAttackBehaviour;
-import com.snowbigdeal.hostilemobscore.entity.slimes.SlimeMoveControl;
+import com.snowbigdeal.hostilemobscore.entity.slimes.HoppingMoveControl;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -96,7 +96,7 @@ public class SleepyConeAttackBehaviour extends TelegraphAttackBehaviour<SleepySl
     @Override
     protected void onStart(SleepySlime slime) {
         slime.coneCooldown = COOLDOWN_TICKS;
-        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setAttackLock(true);
+        if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(true);
         var attr = slime.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
         if (attr != null) attr.addOrUpdateTransientModifier(KB_RESIST_MODIFIER);
     }
@@ -120,7 +120,7 @@ public class SleepyConeAttackBehaviour extends TelegraphAttackBehaviour<SleepySl
 
     @Override
     protected void onStop(SleepySlime slime) {
-        if (slime.getMoveControl() instanceof SlimeMoveControl smc) smc.setAttackLock(false);
+        if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(false);
         var attr = slime.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
         if (attr != null) attr.removeModifier(KB_RESIST_ID);
         slime.notifyOrchestratedConeComplete();

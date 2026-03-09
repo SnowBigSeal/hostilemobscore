@@ -21,7 +21,7 @@ import java.util.*;
  * </ul>
  * Toggle via {@code /hmcdebug tether}, {@code /hmcdebug party}, or {@code /hmcdebug off}.
  */
-public class SlimeDebugRenderer {
+public class HostileMobDebugRenderer {
 
     public static final Set<String> ACTIVE_MODES = new HashSet<>();
 
@@ -41,7 +41,7 @@ public class SlimeDebugRenderer {
 
         AABB searchBox = mc.player.getBoundingBox().inflate(128);
         @SuppressWarnings("unchecked")
-        List<HostileMob<?>> slimes = mc.level.getEntitiesOfClass(
+        List<HostileMob<?>> mobs = mc.level.getEntitiesOfClass(
                 (Class<HostileMob<?>>) (Class<?>) HostileMob.class, searchBox);
 
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
@@ -49,28 +49,28 @@ public class SlimeDebugRenderer {
         PoseStack poseStack = event.getPoseStack();
 
         if (ACTIVE_MODES.contains("tether")) {
-            for (HostileMob<?> slime : slimes) {
-                BlockPos anchor = slime.getSyncedTetherCenter();
+            for (HostileMob<?> mob : mobs) {
+                BlockPos anchor = mob.getSyncedTetherCenter();
                 double ax = anchor.getX() + 0.5 - camX;
                 double ay = anchor.getY() - camY;
                 double az = anchor.getZ() + 0.5 - camZ;
-                double sy = slime.getY() - camY;
+                double sy = mob.getY() - camY;
 
                 // Circle at entity's Y centred on tether anchor
                 drawCircle(poseStack, lines, ax, sy, az, 32.0, 1.0f, 0.45f, 0.0f, 1.0f, 48);
                 // Line from anchor to entity
                 drawLine(poseStack, lines,
                         ax, ay, az,
-                        slime.getX() - camX, slime.getY() - camY, slime.getZ() - camZ,
+                        mob.getX() - camX, mob.getY() - camY, mob.getZ() - camZ,
                         1.0f, 0.45f, 0.0f, 0.5f);
             }
         }
 
         if (ACTIVE_MODES.contains("party")) {
             Map<UUID, List<HostileMob<?>>> parties = new HashMap<>();
-            for (HostileMob<?> slime : slimes) {
-                slime.getSyncedPartyId().ifPresent(id ->
-                        parties.computeIfAbsent(id, k -> new ArrayList<>()).add(slime));
+            for (HostileMob<?> mob : mobs) {
+                mob.getSyncedPartyId().ifPresent(id ->
+                        parties.computeIfAbsent(id, k -> new ArrayList<>()).add(mob));
             }
             for (Map.Entry<UUID, List<HostileMob<?>>> entry : parties.entrySet()) {
                 float[] col = partyColor(entry.getKey());

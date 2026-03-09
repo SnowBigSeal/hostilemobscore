@@ -9,14 +9,14 @@ import net.tslat.smartbrainlib.util.BrainUtils;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Custom targeting for slime mobs. Extends TargetOrRetaliate and gates all
- * target acquisition (initial + retaliation) through a single predicate so
+ * Targeting behaviour for tethered hostile mobs. Extends TargetOrRetaliate and gates
+ * all target acquisition (initial + retaliation) through a single predicate so
  * nothing can sneak past: creative/spectator players and targets outside the
  * tether radius are never set or kept.
  */
-public class SlimeTargetBehaviour<T extends BaseSlime<T>> extends TargetOrRetaliate<T> {
+public class TetheredTargetBehaviour<T extends BaseSlime<T>> extends TargetOrRetaliate<T> {
 
-    public SlimeTargetBehaviour() {
+    public TetheredTargetBehaviour() {
         attackablePredicate(target ->
             target instanceof Player player
             && target.isAlive()

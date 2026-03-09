@@ -1,7 +1,7 @@
 package com.snowbigdeal.hostilemobscore;
 
 import com.snowbigdeal.hostilemobscore.block.ModBlocks;
-import com.snowbigdeal.hostilemobscore.debug.SlimeDebugRenderer;
+import com.snowbigdeal.hostilemobscore.debug.HostileMobDebugRenderer;
 import com.snowbigdeal.hostilemobscore.client.TelegraphAttackVfxManager;
 import com.snowbigdeal.hostilemobscore.items.ModItems;
 import com.snowbigdeal.hostilemobscore.items.SlimeBallColorUtil;
@@ -62,8 +62,8 @@ public class HostileMobsCoreClient {
     static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
         event.getDispatcher().register(
             Commands.literal("hmcdebug")
-                .then(Commands.literal("tether").executes(ctx -> { SlimeDebugRenderer.toggle("tether"); return 1; }))
-                .then(Commands.literal("party").executes(ctx -> { SlimeDebugRenderer.toggle("party"); return 1; }))
+                .then(Commands.literal("tether").executes(ctx -> { HostileMobDebugRenderer.toggle("tether"); return 1; }))
+                .then(Commands.literal("party").executes(ctx -> { HostileMobDebugRenderer.toggle("party"); return 1; }))
                 .then(Commands.literal("slam-circle").executes(ctx -> {
                     TelegraphAttackVfxManager.debugKeepLastSlamCircle = !TelegraphAttackVfxManager.debugKeepLastSlamCircle;
                     ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
@@ -71,7 +71,7 @@ public class HostileMobsCoreClient {
                     return 1;
                 }))
                 .then(Commands.literal("off").executes(ctx -> {
-                    SlimeDebugRenderer.ACTIVE_MODES.clear();
+                    HostileMobDebugRenderer.ACTIVE_MODES.clear();
                     TelegraphAttackVfxManager.debugKeepLastSlamCircle = false;
                     return 1;
                 }))
@@ -80,6 +80,6 @@ public class HostileMobsCoreClient {
 
     @SubscribeEvent
     static void onRenderLevel(RenderLevelStageEvent event) {
-        SlimeDebugRenderer.onRenderLevel(event);
+        HostileMobDebugRenderer.onRenderLevel(event);
     }
 }

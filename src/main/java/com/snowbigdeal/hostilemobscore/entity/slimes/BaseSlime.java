@@ -124,7 +124,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
 
     protected BaseSlime(EntityType<? extends T> entityType, Level level) {
         super(entityType, level);
-        this.moveControl = new SlimeMoveControl(this);
+        this.moveControl = new HoppingMoveControl(this);
     }
 
     // -------------------------------------------------------------------------
@@ -154,7 +154,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     @Override
     public void jumpFromGround() {
         super.jumpFromGround();
-        if (this.moveControl instanceof SlimeMoveControl smc && smc.isAggressive()) {
+        if (this.moveControl instanceof HoppingMoveControl smc && smc.isAggressive()) {
             float yRotRad = this.getYRot() * (float) (Math.PI / 180.0);
             Vec3 current = this.getDeltaMovement();
             double boost = smc.getLeapForce();
@@ -171,14 +171,14 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
         }
     }
 
-    /** Returns a random jump delay in ticks (30–45). Used by {@link SlimeMoveControl}. */
+    /** Returns a random jump delay in ticks (30–45). Used by {@link HoppingMoveControl}. */
     public int getJumpDelay() {
         return this.random.nextInt(JUMP_DELAY_RANGE) + JUMP_DELAY_MIN;
     }
 
     @Override
     protected float getJumpPower() {
-        if (this.moveControl instanceof SlimeMoveControl smc && smc.isAggressive()) {
+        if (this.moveControl instanceof HoppingMoveControl smc && smc.isAggressive()) {
             return JUMP_POWER_AGGRESSIVE;
         }
         return JUMP_POWER_WANDER;
@@ -210,7 +210,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     public BrainActivityGroup<T> getCoreTasks() {
         return BrainActivityGroup.coreTasks(
                 new LookAtAttackTarget<>(),
-                new SlimeMoveBehaviour<>()
+                new HoppingCombatBehaviour<>()
         );
     }
 
@@ -218,7 +218,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     public BrainActivityGroup<T> getIdleTasks() {
         return BrainActivityGroup.idleTasks(
                 new FirstApplicableBehaviour<T>(
-                        new SlimeTargetBehaviour<>(),
+                        new TetheredTargetBehaviour<>(),
                         new SetPlayerLookTarget<>(),
                         new SetRandomLookTarget<>()),
                 new Idle<>().runFor(entity -> entity.getRandom().nextInt(30, 60)));
@@ -245,7 +245,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
 
     @Override
     protected void applyReturnMovement() {
-        if (!(getMoveControl() instanceof SlimeMoveControl smc)) return;
+        if (!(getMoveControl() instanceof HoppingMoveControl smc)) return;
         double dx = getRestrictCenter().getX() + 0.5 - getX();
         double dz = getRestrictCenter().getZ() + 0.5 - getZ();
         float yRot = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0f;
