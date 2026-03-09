@@ -134,6 +134,7 @@ public class HoppingMoveControl extends MoveControl {
 
         if (!hasCurrentClearance()) {
             this.yRot += 180f; // escape the low-ceiling space regardless of mode
+            this.mob.setSpeed(speed * 0.5f); // shuffle out without jumping
             return;
         }
 
