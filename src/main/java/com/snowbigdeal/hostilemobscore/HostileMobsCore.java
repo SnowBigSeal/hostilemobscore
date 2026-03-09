@@ -5,6 +5,7 @@ import com.snowbigdeal.hostilemobscore.choreography.AttackRegistry;
 import com.snowbigdeal.hostilemobscore.client.TelegraphAttackVfxManager;
 import com.snowbigdeal.hostilemobscore.datapack.BossSequenceLoader;
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.SlimeRenderer;
 import com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime.SlimeSlamAttackBehaviour;
 import com.snowbigdeal.hostilemobscore.items.ModComponents;
@@ -26,6 +27,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
@@ -46,6 +48,7 @@ public class HostileMobsCore {
         NeoForge.EVENT_BUS.addListener(HostileMobsCore::onAddReloadListeners);
 
         ModEntities.register(modEventBus);
+        ModMemoryTypes.register(modEventBus);
         ModItems.register(modEventBus);
         ModComponents.register(modEventBus);
         ModSounds.register(modEventBus);
@@ -90,7 +93,7 @@ public class HostileMobsCore {
     @EventBusSubscriber(modid = MODID, value = Dist.CLIENT)
     public static class ClientModEvents {
         @SubscribeEvent
-        public static void onClientSetup(FMLCommonSetupEvent event) {
+        public static void onClientSetup(FMLClientSetupEvent event) {
             EntityRenderers.register(ModEntities.ANGRY_SLIME.get(),  SlimeRenderer.factory("angryslime"));
             EntityRenderers.register(ModEntities.SLEEPY_SLIME.get(), SlimeRenderer.factory("sleepyslime"));
         }

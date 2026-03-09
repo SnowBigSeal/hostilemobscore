@@ -1,6 +1,8 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes;
 
 import com.snowbigdeal.hostilemobscore.entity.HostileMob;
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
+import com.snowbigdeal.hostilemobscore.entity.behaviour.ReturnHomeBehaviour;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.DifficultyInstance;
@@ -8,7 +10,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -25,6 +29,10 @@ import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract base class for all slime-type mobs.
@@ -237,6 +245,21 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
         );
     }
 
+    @Override
+    public Map<Activity, BrainActivityGroup<? extends T>> getAdditionalTasks() {
+        Map<Activity, BrainActivityGroup<? extends T>> tasks = new HashMap<>();
+        tasks.put(ModMemoryTypes.ACTIVITY_RETURNING_HOME.get(),
+                new BrainActivityGroup<T>(ModMemoryTypes.ACTIVITY_RETURNING_HOME.get())
+                        .onlyStartWithMemoryStatus(ModMemoryTypes.RETURNING_HOME.get(), MemoryStatus.VALUE_PRESENT)
+                        .behaviours(new ReturnHomeBehaviour<>()));
+        return tasks;
+    }
+
+    @Override
+    public List<Activity> getActivityPriorities() {
+        return List.of(ModMemoryTypes.ACTIVITY_RETURNING_HOME.get(), Activity.FIGHT, Activity.IDLE);
+    }
+
     /**
      * Subclasses return their specific attack priority list, wrapped in a
      * {@link FirstApplicableBehaviour}.
@@ -244,7 +267,7 @@ public abstract class BaseSlime<T extends BaseSlime<T>> extends HostileMob<T> {
     protected abstract FirstApplicableBehaviour<T> getAttackBehaviours();
 
     @Override
-    protected void applyReturnMovement() {
+    public void applyReturnMovement() {
         if (!(getMoveControl() instanceof HoppingMoveControl smc)) return;
         double dx = getRestrictCenter().getX() + 0.5 - getX();
         double dz = getRestrictCenter().getZ() + 0.5 - getZ();

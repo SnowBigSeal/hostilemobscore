@@ -1,5 +1,6 @@
 package com.snowbigdeal.hostilemobscore.entity;
 
+import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
 import com.snowbigdeal.hostilemobscore.orchestrator.IOrchestrated;
 import com.snowbigdeal.hostilemobscore.orchestrator.OrchestratorAction;
@@ -43,7 +44,7 @@ import java.util.UUID;
  *   <li>SmartBrainLib brain provider</li>
  *   <li>IOrchestrated (party / pending-action) state</li>
  *   <li>Synced tether centre and party ID for client-side debug rendering</li>
- *   <li>Return-home flag used by ReturnHomeBehaviour</li>
+ *   <li>Return-home state backed by {@link ModMemoryTypes#RETURNING_HOME} brain memory</li>
  *   <li>Default sensors (NearbyLiving + HurtBy)</li>
  *   <li>finalizeSpawn: sets tether anchor on first spawn</li>
  *   <li>customServerAiStep: drops creative-player targets then ticks brain</li>
@@ -121,25 +122,29 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
     // Return-home constants
     // -------------------------------------------------------------------------
 
-    /** Distance² (blocks²) at which the mob is considered home (5 blocks). */
-    private static final double HOME_DIST_SQ      = 25.0;
     /** Distance² (blocks²) from anchor at which disengagement triggers a return-home walk. */
     private static final double DISENGAGE_DIST_SQ = 256.0; // 16 blocks
-    /** Ticks before a stuck returning mob despawns (30 seconds). */
-    private static final int    RETURN_TIMEOUT    = 600;
     /** Ticks without a player hit before the mob disengages (30 seconds). */
     private static final int    HIT_TIMER_MAX     = 600;
 
     // -------------------------------------------------------------------------
-    // Return-home flag (used by ReturnHomeBehaviour)
+    // Return-home state — backed by the RETURNING_HOME brain memory so the
+    // SmartBrainLib activity system can gate and run ReturnHomeBehaviour.
     // -------------------------------------------------------------------------
 
-    private boolean returningHome      = false;
-    private int     returnHomeTimeout  = 0;
-    private int     lastPlayerHitTimer = 0;
+    private int lastPlayerHitTimer = 0;
 
-    public boolean isReturningHome()          { return returningHome; }
-    public void    setReturningHome(boolean v) { this.returningHome = v; }
+    public boolean isReturningHome() {
+        return BrainUtils.hasMemory(this, ModMemoryTypes.RETURNING_HOME.get());
+    }
+
+    public void setReturningHome(boolean v) {
+        if (v) {
+            BrainUtils.setMemory(this, ModMemoryTypes.RETURNING_HOME.get(), true);
+        } else {
+            BrainUtils.clearMemory(this, ModMemoryTypes.RETURNING_HOME.get());
+        }
+    }
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -221,28 +226,6 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
 
     @Override
     protected void customServerAiStep() {
-        if (returningHome) {
-            if (getTarget() != null) {
-                setTarget(null);
-                BrainUtils.clearMemory(this, MemoryModuleType.ATTACK_TARGET);
-            }
-            double distSq = distanceToSqr(Vec3.atCenterOf(getRestrictCenter()));
-            if (distSq <= HOME_DIST_SQ) {
-                returningHome      = false;
-                returnHomeTimeout  = 0;
-                lastPlayerHitTimer = 0;
-                setInvulnerable(false);
-                setHealth(getMaxHealth());
-            } else if (++returnHomeTimeout >= RETURN_TIMEOUT) {
-                discard();
-                return;
-            } else {
-                applyReturnMovement();
-            }
-            tickBrain(typedSelf());
-            return;
-        }
-
         // Last-hit timer: disengage if a player hasn't damaged this mob in 30 seconds
         if (lastPlayerHitTimer > 0) {
             if (getTarget() == null) {
@@ -251,8 +234,7 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
                 BrainUtils.clearMemory(this, MemoryModuleType.ATTACK_TARGET);
                 setTarget(null);
                 if (distanceToSqr(Vec3.atCenterOf(getRestrictCenter())) > DISENGAGE_DIST_SQ) {
-                    returningHome     = true;
-                    returnHomeTimeout = 0;
+                    setReturningHome(true);
                     setInvulnerable(true);
                 }
             }
@@ -268,7 +250,7 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
      * Called each tick while this mob is returning to its tether anchor.
      * Drive your movement controller toward {@link #getRestrictCenter()} here.
      */
-    protected abstract void applyReturnMovement();
+    public abstract void applyReturnMovement();
 
     /** Type-safe self-reference for SmartBrainOwner. */
     @SuppressWarnings("unchecked")
