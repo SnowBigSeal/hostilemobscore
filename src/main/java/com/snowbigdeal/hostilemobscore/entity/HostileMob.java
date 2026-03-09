@@ -16,11 +16,9 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.Brain;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.phys.Vec3;
 import net.tslat.smartbrainlib.api.SmartBrainOwner;
 import net.tslat.smartbrainlib.api.core.SmartBrainProvider;
 import net.tslat.smartbrainlib.api.core.sensor.ExtendedSensor;
@@ -47,7 +45,7 @@ import java.util.UUID;
  *   <li>Return-home state backed by {@link ModMemoryTypes#RETURNING_HOME} brain memory</li>
  *   <li>Default sensors (NearbyLiving + HurtBy)</li>
  *   <li>finalizeSpawn: sets tether anchor on first spawn</li>
- *   <li>customServerAiStep: drops creative-player targets then ticks brain</li>
+ *   <li>customServerAiStep: ticks brain</li>
  * </ul>
  *
  * @param <T> The concrete subclass (F-bounded for SmartBrainOwner).
@@ -122,17 +120,13 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
     // Return-home constants
     // -------------------------------------------------------------------------
 
-    /** Distance² (blocks²) from anchor at which disengagement triggers a return-home walk. */
-    private static final double DISENGAGE_DIST_SQ = 256.0; // 16 blocks
     /** Ticks without a player hit before the mob disengages (30 seconds). */
-    private static final int    HIT_TIMER_MAX     = 600;
+    static final int HIT_TIMER_MAX = 600;
 
     // -------------------------------------------------------------------------
     // Return-home state — backed by the RETURNING_HOME brain memory so the
     // SmartBrainLib activity system can gate and run ReturnHomeBehaviour.
     // -------------------------------------------------------------------------
-
-    private int lastPlayerHitTimer = 0;
 
     public boolean isReturningHome() {
         return BrainUtils.hasMemory(this, ModMemoryTypes.RETURNING_HOME.get());
@@ -219,30 +213,13 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
     public boolean hurt(DamageSource source, float amount) {
         boolean damaged = super.hurt(source, amount);
         if (damaged && source.getEntity() instanceof Player p && !p.getAbilities().invulnerable) {
-            lastPlayerHitTimer = HIT_TIMER_MAX;
+            BrainUtils.setMemory(this, ModMemoryTypes.HIT_TIMER.get(), HIT_TIMER_MAX);
         }
         return damaged;
     }
 
     @Override
     protected void customServerAiStep() {
-        // Last-hit timer: disengage if a player hasn't damaged this mob in 30 seconds
-        if (lastPlayerHitTimer > 0) {
-            if (getTarget() == null) {
-                lastPlayerHitTimer = 0;
-            } else if (--lastPlayerHitTimer == 0) {
-                BrainUtils.clearMemory(this, MemoryModuleType.ATTACK_TARGET);
-                setTarget(null);
-                if (distanceToSqr(Vec3.atCenterOf(getRestrictCenter())) > DISENGAGE_DIST_SQ) {
-                    setReturningHome(true);
-                    setInvulnerable(true);
-                }
-            }
-        }
-
-        if (this.getTarget() instanceof Player p && p.getAbilities().invulnerable) {
-            this.setTarget(null);
-        }
         tickBrain(typedSelf());
     }
 

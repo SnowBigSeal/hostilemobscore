@@ -23,6 +23,13 @@ public final class ModMemoryTypes {
     public static final DeferredHolder<MemoryModuleType<?>, MemoryModuleType<Boolean>> RETURNING_HOME =
             MEMORY_TYPES.register("returning_home", () -> new MemoryModuleType<>(Optional.empty()));
 
+    /**
+     * Ticks remaining before a mob that hasn't been hit by a player disengages.
+     * Written to on player hit; decremented each tick by {@link com.snowbigdeal.hostilemobscore.entity.behaviour.DeaggroBehaviour}.
+     */
+    public static final DeferredHolder<MemoryModuleType<?>, MemoryModuleType<Integer>> HIT_TIMER =
+            MEMORY_TYPES.register("hit_timer", () -> new MemoryModuleType<>(Optional.empty()));
+
     /** Activity that preempts FIGHT and IDLE while the mob walks home. */
     public static final DeferredHolder<Activity, Activity> ACTIVITY_RETURNING_HOME =
             ACTIVITIES.register("returning_home", () -> new Activity("returning_home"));
