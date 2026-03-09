@@ -105,7 +105,7 @@ public class SlimeSlamAttackBehaviour extends TelegraphAttackBehaviour<AngrySlim
         this.flightTicks = 0;
         this.wasAirborne = false;
 
-        BrainUtils.setForgettableMemory(slime, ModMemoryTypes.SLAM_COOLDOWN.get(), true,
+        BrainUtils.setMemory(slime, ModMemoryTypes.SLAM_COOLDOWN.get(),
                 COOLDOWN_TICKS + slime.getRandom().nextInt(COOLDOWN_VARIANCE));
 
         if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(true);

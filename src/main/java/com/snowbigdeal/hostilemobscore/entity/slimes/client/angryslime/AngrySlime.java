@@ -3,6 +3,7 @@ package com.snowbigdeal.hostilemobscore.entity.slimes.client.angryslime;
 import com.snowbigdeal.hostilemobscore.Constants;
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
 import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
+import com.snowbigdeal.hostilemobscore.entity.behaviour.CooldownTickBehaviour;
 import com.snowbigdeal.hostilemobscore.entity.slimes.BaseSlime;
 import com.snowbigdeal.hostilemobscore.entity.slimes.HoppingMoveControl;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
@@ -17,6 +18,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.tslat.smartbrainlib.api.core.BrainActivityGroup;
 import net.tslat.smartbrainlib.api.core.behaviour.FirstApplicableBehaviour;
 import net.tslat.smartbrainlib.api.core.behaviour.custom.attack.AnimatableMeleeAttack;
 import net.tslat.smartbrainlib.util.BrainUtils;
@@ -44,7 +46,7 @@ public class AngrySlime extends BaseSlime<AngrySlime> {
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty,
                                         MobSpawnType spawnType, SpawnGroupData spawnData) {
         SpawnGroupData result = super.finalizeSpawn(level, difficulty, spawnType, spawnData);
-        BrainUtils.setForgettableMemory(this, ModMemoryTypes.SLAM_COOLDOWN.get(), true, Constants.seconds(10));
+        BrainUtils.setMemory(this, ModMemoryTypes.SLAM_COOLDOWN.get(), Constants.seconds(10));
         return result;
     }
 
@@ -115,6 +117,13 @@ public class AngrySlime extends BaseSlime<AngrySlime> {
     // -------------------------------------------------------------------------
     // AI
     // -------------------------------------------------------------------------
+
+    @Override
+    public BrainActivityGroup<AngrySlime> getCoreTasks() {
+        BrainActivityGroup<AngrySlime> core = super.getCoreTasks();
+        core.getBehaviours().add(new CooldownTickBehaviour<>(ModMemoryTypes.SLAM_COOLDOWN));
+        return core;
+    }
 
     @Override
     protected FirstApplicableBehaviour<AngrySlime> getAttackBehaviours() {

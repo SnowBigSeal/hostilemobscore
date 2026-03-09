@@ -2,6 +2,7 @@ package com.snowbigdeal.hostilemobscore.entity.slimes.client.sleepyslime;
 
 import com.snowbigdeal.hostilemobscore.entity.ModEntities;
 import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
+import com.snowbigdeal.hostilemobscore.entity.behaviour.CooldownTickBehaviour;
 import com.snowbigdeal.hostilemobscore.entity.behaviour.OrchestratorSyncBehaviour;
 import com.snowbigdeal.hostilemobscore.entity.slimes.BaseSlime;
 import com.snowbigdeal.hostilemobscore.orchestrator.IMobAction;
@@ -92,6 +93,13 @@ public class SleepySlime extends BaseSlime<SleepySlime> {
     // -------------------------------------------------------------------------
     // Brain / AI — override idle tasks to remove proactive targeting
     // -------------------------------------------------------------------------
+
+    @Override
+    public BrainActivityGroup<SleepySlime> getCoreTasks() {
+        BrainActivityGroup<SleepySlime> core = super.getCoreTasks();
+        core.getBehaviours().add(new CooldownTickBehaviour<>(ModMemoryTypes.CONE_COOLDOWN));
+        return core;
+    }
 
     @Override
     public BrainActivityGroup<SleepySlime> getIdleTasks() {

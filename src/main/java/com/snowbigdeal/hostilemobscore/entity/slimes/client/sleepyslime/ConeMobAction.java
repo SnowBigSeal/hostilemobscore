@@ -35,6 +35,7 @@ public class ConeMobAction implements IMobAction {
 
     @Override
     public int getCooldownTicks(Mob mob) {
-        return BrainUtils.hasMemory(mob, ModMemoryTypes.CONE_COOLDOWN.get()) ? 1 : 0;
+        Integer remaining = BrainUtils.getMemory(mob, ModMemoryTypes.CONE_COOLDOWN.get());
+        return remaining != null ? remaining : 0;
     }
 }

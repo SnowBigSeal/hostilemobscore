@@ -35,6 +35,7 @@ public class SlamMobAction implements IMobAction {
 
     @Override
     public int getCooldownTicks(Mob mob) {
-        return BrainUtils.hasMemory(mob, ModMemoryTypes.SLAM_COOLDOWN.get()) ? 1 : 0;
+        Integer remaining = BrainUtils.getMemory(mob, ModMemoryTypes.SLAM_COOLDOWN.get());
+        return remaining != null ? remaining : 0;
     }
 }

@@ -100,7 +100,7 @@ public class SleepyConeAttackBehaviour extends TelegraphAttackBehaviour<SleepySl
 
     @Override
     protected void onStart(SleepySlime slime) {
-        BrainUtils.setForgettableMemory(slime, ModMemoryTypes.CONE_COOLDOWN.get(), true, COOLDOWN_TICKS);
+        BrainUtils.setMemory(slime, ModMemoryTypes.CONE_COOLDOWN.get(), COOLDOWN_TICKS);
         if (slime.getMoveControl() instanceof HoppingMoveControl smc) smc.setAttackLock(true);
         var attr = slime.getAttribute(Attributes.KNOCKBACK_RESISTANCE);
         if (attr != null) attr.addOrUpdateTransientModifier(KB_RESIST_MODIFIER);
