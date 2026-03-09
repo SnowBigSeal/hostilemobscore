@@ -1,5 +1,6 @@
 package com.snowbigdeal.hostilemobscore.entity.slimes;
 
+import com.snowbigdeal.hostilemobscore.entity.HostileMob;
 import com.snowbigdeal.hostilemobscore.entity.ModMemoryTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -44,11 +45,13 @@ public class TetheredTargetBehaviour<T extends BaseSlime<T>> extends TargetOrRet
     @Override
     protected void start(T entity) {
         super.start(entity);
-        // Ensure brain memory stays in sync with what we allow
         LivingEntity target = BrainUtils.getTargetOfEntity(entity);
         if (target instanceof Player player && player.getAbilities().invulnerable) {
             BrainUtils.clearMemory(entity, MemoryModuleType.ATTACK_TARGET);
             entity.setTarget(null);
+        } else if (target != null && !BrainUtils.hasMemory(entity, ModMemoryTypes.HIT_TIMER.get())) {
+            // Seed the deaggro timer for mobs that aggro by proximity (never personally hit).
+            BrainUtils.setMemory(entity, ModMemoryTypes.HIT_TIMER.get(), HostileMob.HIT_TIMER_MAX);
         }
     }
 }

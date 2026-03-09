@@ -121,7 +121,7 @@ public abstract class HostileMob<T extends HostileMob<T>> extends Mob
     // -------------------------------------------------------------------------
 
     /** Ticks without a player hit before the mob disengages (30 seconds). */
-    static final int HIT_TIMER_MAX = 600;
+    public static final int HIT_TIMER_MAX = 600;
 
     // -------------------------------------------------------------------------
     // Return-home state — backed by the RETURNING_HOME brain memory so the
